@@ -44,6 +44,17 @@
       ],
       "economicPosition": "Occupied and devastated, weak negotiating position"
     },
+    "Spain": {
+      "name": "Spain",
+      "color": "bg-amber-600",
+      "textColor": "text-amber-600",
+      "objectives": [
+        "Secure reconstruction financing",
+        "Restore economic stability",
+        "Regain great power status"
+      ],
+      "economicPosition": "Occupied and devastated, weak negotiating position"
+    },
       "Japan": {
       "name": "Japan",
       "color": "bg-amber-600",
