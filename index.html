@@ -56,6 +56,7 @@
           const [isAuthenticated, setIsAuthenticated] = useState(false);
           const [username, setUsername] = useState('');
           const [showRegister, setShowRegister] = useState(false);
+          const [isCheckingResume, setIsCheckingResume] = useState(false);
 
           // Check for existing session on mount
           useEffect(() => {
@@ -65,6 +66,52 @@
             if (savedUsername && savedPlayerId) {
               setUsername(savedUsername);
               setIsAuthenticated(true);
+              setIsCheckingResume(true); // Start checking for resume
+              
+              // Set up resume check listener
+              const handleResumeCheck = (result) => {
+                setIsCheckingResume(false); // Resume check complete
+                
+                if (result.shouldResume && result.country) {
+                  console.log('Auto-resuming as', result.country);
+                  setPlayerCountry(result.country);
+                  
+                  // Show notification
+                  const phase = result.gamePhase === 'phase2' 
+                    ? `Year ${result.currentYear}`
+                    : result.gamePhase === 'voting'
+                    ? `Round ${result.currentRound}`
+                    : result.gamePhase;
+                  
+                  setTimeout(() => {
+                    alert(`Session restored! Resuming as ${result.country} (${phase})`);
+                  }, 500);
+                }
+              };
+              
+              socket.on('resumeCheck', handleResumeCheck);
+              
+              // Check for resume after connection
+              const checkForResume = () => {
+                if (socket.connected) {
+                  socket.emit('checkResume', { playerId: savedPlayerId });
+                }
+              };
+              
+              // Check immediately if already connected
+              if (socket.connected) {
+                checkForResume();
+              }
+              
+              // Also check on connection
+              socket.on('connect', checkForResume);
+              
+              return () => {
+                socket.off('resumeCheck', handleResumeCheck);
+                socket.off('connect', checkForResume);
+              };
+            } else {
+              setIsCheckingResume(false); // No session to check
             }
           }, []);
 
@@ -116,7 +163,26 @@
                 sessionStorage.setItem('brettonWoodsUsername', result.username);
                 setUsername(result.username);
                 setIsAuthenticated(true);
+                
+                // Auto-resume if player was in game
+                if (result.resumeData && result.resumeData.country) {
+                  console.log('Resuming as', result.resumeData.country);
+                  setPlayerCountry(result.resumeData.country);
+                  setIsCheckingResume(false);
+                  
+                  // Show resume notification
+                  const phase = result.resumeData.gamePhase === 'phase2' 
+                    ? `Phase 2 Year ${result.resumeData.currentYear}`
+                    : result.resumeData.gamePhase === 'voting'
+                    ? `Phase 1 Round ${result.resumeData.currentRound}`
+                    : result.resumeData.gamePhase;
+                  
+                  alert(`Welcome back! Resuming as ${result.resumeData.country} (${phase})`);
+                } else {
+                  setIsCheckingResume(false);
+                }
               } else {
+                setIsCheckingResume(false);
                 alert(result.message);
               }
             });
@@ -1637,6 +1703,27 @@
 
           // Voting Screen
           if (!playerCountry) {
+            // Show loading if checking for resume
+            if (isCheckingResume) {
+              return (
+                <div className="container">
+                  <ConnectionStatus />
+                  <div className="card">
+                    <div style={{ textAlign: 'center', padding: '40px' }}>
+                      <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⏳</div>
+                      <h3 style={{ color: '#1e293b', marginBottom: '12px' }}>
+                        Checking for Previous Session...
+                      </h3>
+                      <p style={{ color: '#64748b' }}>
+                        Please wait while we restore your progress
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+            
+            // Not in game and not checking resume
             return (
               <div className="container">
                 <ConnectionStatus />

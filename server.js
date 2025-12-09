@@ -240,6 +240,30 @@ io.on('connection', (socket) => {
     console.log(`User logged in: ${username}${resumeData ? ' (resuming)' : ''}`);
   });
   
+  // Check if player should be auto-resumed
+  socket.on('checkResume', ({ playerId }) => {
+    const existingPlayer = gameState.players[playerId];
+    
+    if (existingPlayer) {
+      // Player exists in game - update socket ID and resume
+      existingPlayer.socketId = socket.id;
+      existingPlayer.lastLogin = Date.now();
+      
+      socket.emit('resumeCheck', {
+        shouldResume: true,
+        country: existingPlayer.country,
+        gamePhase: gameState.gamePhase,
+        currentRound: gameState.currentRound,
+        currentYear: gameState.phase2.currentYear
+      });
+      
+      console.log(`Auto-resuming player ${playerId} as ${existingPlayer.country}`);
+      broadcastState();
+    } else {
+      socket.emit('resumeCheck', { shouldResume: false });
+    }
+  });
+  
   // Join game
   socket.on('joinGame', ({ playerId, country }) => {
     // Check if country is already taken
