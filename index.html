@@ -464,6 +464,76 @@
             );
           }
 
+          // Phase 2: Economic Management
+          if (gameStateData.gamePhase === 'phase2' && gameStateData.phase2 && gameStateData.phase2.active) {
+            return (
+              <div className="container">
+                <UserDisplay />
+                <ConnectionStatus />
+                <div className="header">
+                  <h1>📊 Post-War Economic Management</h1>
+                  <p>Phase 2: Implement the Bretton Woods Agreement</p>
+                </div>
+
+                <div className="card">
+                  <h2 style={{ textAlign: 'center', marginBottom: '30px', color: '#16a34a' }}>
+                    🎉 Phase 1 Complete!
+                  </h2>
+                  <p style={{ textAlign: 'center', fontSize: '1.125rem', color: '#64748b', marginBottom: '40px' }}>
+                    The Bretton Woods Conference has concluded. Now it's time to implement the economic policies you agreed upon.
+                  </p>
+                  
+                  <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+                    <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', marginBottom: '30px' }}>
+                      <h3 style={{ marginBottom: '16px' }}>Current Scores (Phase 1):</h3>
+                      <div style={{ display: 'grid', gap: '12px' }}>
+                        {Object.entries(gameStateData.scores).sort((a, b) => b[1] - a[1]).map(([country, score]) => {
+                          const countryData = countries[country];
+                          return (
+                            <div key={country} style={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between',
+                              padding: '12px',
+                              background: 'white',
+                              borderRadius: '6px',
+                              borderLeft: '4px solid ' + (country === playerCountry ? '#3b82f6' : '#cbd5e1')
+                            }}>
+                              <span className={countryData.textColor} style={{ fontWeight: 'bold' }}>
+                                {countryData.name}
+                              </span>
+                              <span style={{ fontWeight: 'bold' }}>{score} points</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '20px', background: '#eff6ff', borderRadius: '8px', marginBottom: '30px' }}>
+                      <h3 style={{ marginBottom: '16px', color: '#1e40af' }}>Phase 2: 1946-1952</h3>
+                      <p style={{ color: '#64748b', fontSize: '0.9rem' }}>
+                        For the next 7 years, you'll manage your country's economy. Set interest rates, exchange rates, 
+                        and tariffs each year. Your economic performance will add to your Phase 1 score!
+                      </p>
+                    </div>
+
+                    <div style={{ textAlign: 'center' }}>
+                      <p style={{ fontSize: '1.5rem', marginBottom: '20px' }}>
+                        🚧 Phase 2 UI Coming Soon 🚧
+                      </p>
+                      <p style={{ color: '#64748b', marginBottom: '30px' }}>
+                        The economic management phase is implemented on the server but the full UI is not yet complete.
+                        For now, you can reset the game to play Phase 1 again.
+                      </p>
+                      <button className="btn-primary" onClick={resetGame}>
+                        🔄 Reset and Play Again
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
           // Game Complete
           if (gameStateData.gamePhase === 'complete') {
             const sortedScores = Object.entries(gameStateData.scores).sort((a, b) => b[1] - a[1]);
