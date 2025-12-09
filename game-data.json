@@ -56,15 +56,15 @@
       "economicPosition": "Underdeveloped, civil war looming, minimal influence"
     },
     "India": {
-      "name": "India",
+      "name": "India (British Raj)",
       "color": "bg-orange-600",
       "textColor": "text-orange-600",
       "objectives": [
-        "Secure post-colonial economic independence",
-        "Obtain development financing for industrialization",
-        "Gain voice for developing nations"
+        "Represent Indian interests despite colonial rule",
+        "Prepare economic foundation for independence (Aug 1947)",
+        "Secure favorable terms for future sovereign India"
       ],
-      "economicPosition": "British colony nearing independence, agricultural economy"
+      "economicPosition": "British colony in 1944-46, gains independence August 1947, transitions to sovereign democracy"
     },
     "Argentina": {
       "name": "Argentina",
@@ -150,7 +150,7 @@
         {
           "id": "c",
           "text": "Multiple reserve currencies",
-          "favors": ["USSR", "UK", "France"],
+          "favors": ["USSR", "UK", "France", "India", "Argentina"],
           "opposes": ["USA"]
         }
       ]
@@ -169,7 +169,7 @@
         {
           "id": "b",
           "text": "Adjustable pegs with flexibility",
-          "favors": ["UK", "France"],
+          "favors": ["UK", "France", "India", "Argentina"],
           "opposes": ["USA"]
         },
         {
@@ -194,7 +194,7 @@
         {
           "id": "b",
           "text": "Transitional capital controls",
-          "favors": ["UK", "USSR", "France", "China"],
+          "favors": ["UK", "USSR", "France", "China", "India", "Argentina"],
           "opposes": []
         },
         {
@@ -225,7 +225,7 @@
         {
           "id": "c",
           "text": "More equal distribution",
-          "favors": ["USSR", "China"],
+          "favors": ["USSR", "China", "India", "Argentina"],
           "opposes": ["USA", "UK"]
         }
       ]
@@ -244,7 +244,7 @@
         {
           "id": "b",
           "text": "Large unconditional grants",
-          "favors": ["UK", "USSR", "France", "China"],
+          "favors": ["UK", "USSR", "France", "China", "India"],
           "opposes": ["USA"]
         },
         {
@@ -269,7 +269,7 @@
         {
           "id": "b",
           "text": "IMF stabilization loans",
-          "favors": ["UK", "France", "China"],
+          "favors": ["UK", "France", "China", "India", "Argentina"],
           "opposes": []
         },
         {

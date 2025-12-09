@@ -29,13 +29,80 @@ let gameState = {
   roundHistory: [],
   // User authentication
   users: {}, // username -> { password: hashedPassword, playerId: string, createdAt: timestamp }
+  // Military deployments by country
+  militaryDeployments: {
+    USA: {
+      bases: [
+        { name: "Continental US", lat: 39, lng: -98, troops: 8000000, type: "homeland" },
+        { name: "Pearl Harbor", lat: 21.3, lng: -157.8, troops: 50000, type: "naval" },
+        { name: "Philippines", lat: 14.6, lng: 121, troops: 30000, type: "occupied" },
+        { name: "Germany (Occupation)", lat: 50, lng: 10, troops: 250000, type: "occupation" },
+        { name: "Japan (Occupation)", lat: 36, lng: 138, troops: 350000, type: "occupation" }
+      ],
+      totalTroops: 12000000,
+      militaryBudget: 90000 // Million USD
+    },
+    UK: {
+      bases: [
+        { name: "British Isles", lat: 54, lng: -2, troops: 3000000, type: "homeland" },
+        { name: "India (Colonial)", lat: 20, lng: 77, troops: 200000, type: "colonial" },
+        { name: "Egypt (Suez)", lat: 30, lng: 31, troops: 80000, type: "base" },
+        { name: "Singapore", lat: 1.3, lng: 103.8, troops: 40000, type: "base" },
+        { name: "Germany (Occupation)", lat: 51, lng: 9, troops: 120000, type: "occupation" }
+      ],
+      totalTroops: 5000000,
+      militaryBudget: 15000
+    },
+    USSR: {
+      bases: [
+        { name: "Soviet Union", lat: 60, lng: 100, troops: 12000000, type: "homeland" },
+        { name: "Eastern Europe", lat: 52, lng: 20, troops: 2000000, type: "occupation" },
+        { name: "Manchuria", lat: 45, lng: 125, troops: 500000, type: "forward" }
+      ],
+      totalTroops: 11000000,
+      militaryBudget: 25000
+    },
+    France: {
+      bases: [
+        { name: "France", lat: 46, lng: 2, troops: 800000, type: "homeland" },
+        { name: "Algeria (Colonial)", lat: 28, lng: 3, troops: 100000, type: "colonial" },
+        { name: "Indochina (Colonial)", lat: 16, lng: 106, troops: 50000, type: "colonial" }
+      ],
+      totalTroops: 1200000,
+      militaryBudget: 5000
+    },
+    China: {
+      bases: [
+        { name: "Nationalist China", lat: 35, lng: 105, troops: 3000000, type: "homeland" },
+        { name: "Communist Base Areas", lat: 38, lng: 109, troops: 1000000, type: "insurgent" }
+      ],
+      totalTroops: 4300000,
+      militaryBudget: 1500
+    },
+    India: {
+      bases: [
+        { name: "British India", lat: 20, lng: 77, troops: 2000000, type: "colonial_native" }
+      ],
+      totalTroops: 2000000,
+      militaryBudget: 800
+    },
+    Argentina: {
+      bases: [
+        { name: "Argentina", lat: -34, lng: -64, troops: 120000, type: "homeland" }
+      ],
+      totalTroops: 120000,
+      militaryBudget: 300
+    }
+  },
   // Phase 2: Post-war economic management (1946-1952)
   phase2: {
     active: false,
     currentYear: 1946,
     maxYears: 7,
     yearlyData: {}, // year -> country -> economic data
-    policies: {} // country -> { centralBankRate, exchangeRate, tariffRate }
+    policies: {}, // country -> { centralBankRate, exchangeRate, tariffRate }
+    achievements: {}, // country -> achievements earned
+    yearScores: {} // year -> country -> score breakdown
   }
 };
 
@@ -139,8 +206,38 @@ io.on('connection', (socket) => {
       return;
     }
     
-    socket.emit('loginResult', { success: true, playerId: user.playerId, username: username });
-    console.log(`User logged in: ${username}`);
+    // Check if player was previously in game
+    const playerId = user.playerId;
+    const existingPlayer = gameState.players[playerId];
+    let resumeData = null;
+    
+    if (existingPlayer) {
+      // Player is resuming - update socket ID
+      existingPlayer.socketId = socket.id;
+      existingPlayer.lastLogin = Date.now();
+      resumeData = {
+        country: existingPlayer.country,
+        gamePhase: gameState.gamePhase,
+        currentRound: gameState.currentRound,
+        currentYear: gameState.phase2.currentYear,
+        isResuming: true
+      };
+      console.log(`User ${username} resumed as ${existingPlayer.country}`);
+    }
+    
+    socket.emit('loginResult', { 
+      success: true, 
+      playerId: user.playerId, 
+      username: username,
+      resumeData: resumeData
+    });
+    
+    // Broadcast updated state if resuming
+    if (resumeData) {
+      broadcastState();
+    }
+    
+    console.log(`User logged in: ${username}${resumeData ? ' (resuming)' : ''}`);
   });
   
   // Join game
@@ -426,8 +523,30 @@ function calculateYearEconomics() {
       civilWarPenalty.trade = -500;    // Trade disruption
     }
     
-    // Apply civil war GDP penalty
+    // India Independence transition (colonial → independent)
+    let indiaTransition = {
+      gdp: 0,
+      inflation: 0,
+      trade: 0
+    };
+    if (country === 'India') {
+      if (currentYear === 1947) {
+        // 1947: Partition year - severe disruption
+        indiaTransition.gdp = -1.5;      // Partition violence, displacement
+        indiaTransition.inflation = 8;    // Economic chaos
+        indiaTransition.trade = -300;     // Border disruption with Pakistan
+      } else if (currentYear === 1948) {
+        // 1948: Post-independence recovery begins
+        indiaTransition.gdp = -0.5;      // Still recovering
+        indiaTransition.inflation = 3;    // Stabilizing
+        indiaTransition.trade = -100;     // Trade routes adjusting
+      }
+      // 1949+: Full independence, no penalties (but also no colonial advantages)
+    }
+    
+    // Apply penalties
     gdpGrowth += civilWarPenalty.gdp;
+    gdpGrowth += indiaTransition.gdp;
     
     // Random shock (-1 to +1)
     const randomShock = (Math.random() - 0.5) * 2;
@@ -445,6 +564,9 @@ function calculateYearEconomics() {
     
     // Apply China civil war hyperinflation
     inflation += civilWarPenalty.inflation;
+    
+    // Apply India independence transition inflation
+    inflation += indiaTransition.inflation;
     
     // Calculate unemployment (inverse of growth)
     let unemployment = prevData.unemployment;
@@ -468,6 +590,9 @@ function calculateYearEconomics() {
     
     // Apply China civil war trade disruption
     tradeBalance += civilWarPenalty.trade;
+    
+    // Apply India independence transition trade disruption
+    tradeBalance += indiaTransition.trade;
     
     // Calculate gold reserves
     let goldReserves = prevData.goldReserves;
@@ -774,6 +899,18 @@ function calculateFinalAchievements() {
     
     // India-specific achievements
     if (country === 'India') {
+      // Partition Survivor (20 points) - Navigate 1947-1948 transition successfully
+      const partition1947 = gameState.phase2.yearlyData[1947]?.[country];
+      const partition1948 = gameState.phase2.yearlyData[1948]?.[country];
+      if (partition1947 && partition1948) {
+        // Survived if GDP stayed positive and unemployment didn't explode
+        if (partition1947.gdpGrowth > -3 && partition1948.gdpGrowth > -1 && 
+            partition1947.unemployment < 15 && partition1948.unemployment < 12) {
+          achievements.push({ name: 'Partition Survivor', description: 'Navigated independence crisis successfully', points: 20 });
+          bonusPoints += 20;
+        }
+      }
+      
       // Post-Colonial Success (40 points) - Strong growth after independence
       if (avgGDP >= 5 && avgInflation < 6) {
         achievements.push({ name: 'Post-Colonial Success', description: 'Strong independent development', points: 40 });

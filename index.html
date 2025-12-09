@@ -498,6 +498,12 @@
             // China Civil War detection
             const isChinaCivilWar = playerCountry === 'China' && currentYear >= 1946 && currentYear <= 1949;
             const isChinaCommunist = playerCountry === 'China' && currentYear >= 1950;
+            
+            // India Independence transition detection
+            const isIndiaColonial = playerCountry === 'India' && currentYear >= 1946 && currentYear <= 1946;
+            const isIndiaPartition = playerCountry === 'India' && currentYear === 1947;
+            const isIndiaPostPartition = playerCountry === 'India' && currentYear === 1948;
+            const isIndiaIndependent = playerCountry === 'India' && currentYear >= 1949;
 
             return (
               <div className="container">
@@ -515,7 +521,15 @@
                         Year {currentYear} ({currentYear - 1945} of 7)
                       </h2>
                       <p style={{ color: '#64748b', fontSize: '0.9rem' }}>
-                        Playing as: <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>{countries[playerCountry].name}</span>
+                        Playing as: <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>
+                          {playerCountry === 'India' && currentYear < 1947 
+                            ? 'India (British Raj)' 
+                            : playerCountry === 'India' && currentYear === 1947
+                            ? 'India (Partition Year)'
+                            : playerCountry === 'India' && currentYear >= 1948
+                            ? 'Republic of India'
+                            : countries[playerCountry].name}
+                        </span>
                       </p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -612,6 +626,256 @@
                         color: '#78350f'
                       }}>
                         <strong>Reconstruction Bonus:</strong> Civil war penalties removed. Centralized planning enables rapid recovery.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* India Independence Banner */}
+                  {playerCountry === 'India' && currentYear >= 1946 && currentYear < 1948 && (
+                    <div style={{
+                      padding: '20px',
+                      background: '#fff7ed',
+                      border: '2px solid #ea580c',
+                      borderRadius: '8px',
+                      marginBottom: '30px'
+                    }}>
+                      <div style={{ 
+                        fontWeight: 'bold', 
+                        color: '#9a3412', 
+                        fontSize: '1.125rem',
+                        marginBottom: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        🇮🇳 BRITISH RAJ - COLONIAL ADMINISTRATION
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#7c2d12', marginBottom: '8px' }}>
+                        India remains under British rule. Economic policies constrained by colonial oversight.
+                      </div>
+                      <div style={{ 
+                        padding: '12px',
+                        background: '#fed7aa',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        color: '#7c2d12',
+                        marginTop: '12px'
+                      }}>
+                        {currentYear < 1947 
+                          ? `⏳ Independence coming August 1947 (${1947 - currentYear + 1} year${1947 - currentYear > 0 ? 's' : ''} remaining)`
+                          : '🎉 Independence achieved August 15, 1947! Transitioning to sovereign republic...'}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* India Post-Independence Banner */}
+                  {playerCountry === 'India' && currentYear >= 1948 && (
+                    <div style={{
+                      padding: '20px',
+                      background: '#dcfce7',
+                      border: '2px solid #16a34a',
+                      borderRadius: '8px',
+                      marginBottom: '30px'
+                    }}>
+                      <div style={{ 
+                        fontWeight: 'bold', 
+                        color: '#166534', 
+                        fontSize: '1.125rem',
+                        marginBottom: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        🇮🇳 REPUBLIC OF INDIA - SOVEREIGN NATION
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#14532d', marginBottom: '8px' }}>
+                        Independent since August 15, 1947. Building democratic institutions and modern economy.
+                      </div>
+                      <div style={{ 
+                        padding: '12px',
+                        background: '#bbf7d0',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        color: '#14532d'
+                      }}>
+                        <strong>Sovereign Bonus:</strong> Full economic autonomy. Can pursue independent development strategies and non-aligned policies.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Policies Section Header */}
+
+                  {/* India Colonial Period Banner (1946) */}
+                  {isIndiaColonial && (
+                    <div style={{
+                      padding: '20px',
+                      background: '#f0f9ff',
+                      border: '2px solid #0284c7',
+                      borderRadius: '8px',
+                      marginBottom: '30px'
+                    }}>
+                      <div style={{ 
+                        fontWeight: 'bold', 
+                        color: '#075985', 
+                        fontSize: '1.125rem',
+                        marginBottom: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        🇬🇧 BRITISH INDIA - COLONIAL ADMINISTRATION ({currentYear})
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#0c4a6e', marginBottom: '8px' }}>
+                        Still under British colonial rule. Independence negotiations ongoing. Economic policies constrained by colonial interests.
+                      </div>
+                      <div style={{ 
+                        marginTop: '12px', 
+                        fontSize: '0.875rem', 
+                        color: '#0c4a6e',
+                        fontStyle: 'italic'
+                      }}>
+                        Independence expected August 15, 1947
+                      </div>
+                    </div>
+                  )}
+
+                  {/* India Partition Crisis Banner (1947) */}
+                  {isIndiaPartition && (
+                    <div style={{
+                      padding: '20px',
+                      background: '#fef2f2',
+                      border: '2px solid #dc2626',
+                      borderRadius: '8px',
+                      marginBottom: '30px'
+                    }}>
+                      <div style={{ 
+                        fontWeight: 'bold', 
+                        color: '#dc2626', 
+                        fontSize: '1.125rem',
+                        marginBottom: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        ⚠️ PARTITION OF INDIA ({currentYear})
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#7f1d1d', marginBottom: '8px' }}>
+                        Independence achieved August 15, but partition into India and Pakistan triggers massive violence, displacement, and economic chaos.
+                      </div>
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '8px',
+                        marginTop: '12px',
+                        padding: '12px',
+                        background: '#fee2e2',
+                        borderRadius: '6px'
+                      }}>
+                        <div style={{ fontSize: '0.875rem', color: '#991b1b' }}>
+                          <strong>GDP:</strong> -1.5% penalty (violence, refugees)
+                        </div>
+                        <div style={{ fontSize: '0.875rem', color: '#991b1b' }}>
+                          <strong>Inflation:</strong> +8% (supply disruption)
+                        </div>
+                        <div style={{ fontSize: '0.875rem', color: '#991b1b' }}>
+                          <strong>Trade:</strong> -$300M (Pakistan border crisis)
+                        </div>
+                      </div>
+                      <div style={{ 
+                        marginTop: '12px', 
+                        fontSize: '0.875rem', 
+                        color: '#7f1d1d',
+                        fontStyle: 'italic'
+                      }}>
+                        10-20 million displaced, 1-2 million killed. Economic recovery will take years.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* India Post-Partition Recovery Banner (1948) */}
+                  {isIndiaPostPartition && (
+                    <div style={{
+                      padding: '20px',
+                      background: '#fff7ed',
+                      border: '2px solid #f97316',
+                      borderRadius: '8px',
+                      marginBottom: '30px'
+                    }}>
+                      <div style={{ 
+                        fontWeight: 'bold', 
+                        color: '#c2410c', 
+                        fontSize: '1.125rem',
+                        marginBottom: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        🇮🇳 REPUBLIC OF INDIA - POST-PARTITION RECOVERY ({currentYear})
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#9a3412', marginBottom: '8px' }}>
+                        First full year as independent nation. Rebuilding after partition trauma. Nehru's government focuses on stabilization and institution-building.
+                      </div>
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '8px',
+                        marginTop: '12px',
+                        padding: '12px',
+                        background: '#fed7aa',
+                        borderRadius: '6px'
+                      }}>
+                        <div style={{ fontSize: '0.875rem', color: '#9a3412' }}>
+                          <strong>GDP:</strong> -0.5% (still recovering)
+                        </div>
+                        <div style={{ fontSize: '0.875rem', color: '#9a3412' }}>
+                          <strong>Inflation:</strong> +3% (stabilizing)
+                        </div>
+                        <div style={{ fontSize: '0.875rem', color: '#9a3412' }}>
+                          <strong>Trade:</strong> -$100M (normalizing)
+                        </div>
+                      </div>
+                      <div style={{ 
+                        marginTop: '12px', 
+                        fontSize: '0.875rem', 
+                        color: '#9a3412',
+                        fontStyle: 'italic'
+                      }}>
+                        Constitutional assembly drafting new republic. Full sovereignty by 1949.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* India Independent Banner (1949+) */}
+                  {isIndiaIndependent && (
+                    <div style={{
+                      padding: '20px',
+                      background: '#fef3c7',
+                      border: '2px solid #f59e0b',
+                      borderRadius: '8px',
+                      marginBottom: '30px'
+                    }}>
+                      <div style={{ 
+                        fontWeight: 'bold', 
+                        color: '#92400e', 
+                        fontSize: '1.125rem',
+                        marginBottom: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        🇮🇳 REPUBLIC OF INDIA - FULLY INDEPENDENT ({currentYear})
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#78350f', marginBottom: '8px' }}>
+                        Republic proclaimed January 26, 1950. Partition crisis over. Independent foreign policy. Building democratic socialist economy.
+                      </div>
+                      <div style={{ 
+                        padding: '12px',
+                        background: '#fde68a',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        color: '#78350f'
+                      }}>
+                        <strong>Full Sovereignty:</strong> No more colonial constraints or partition penalties. Chart your own economic path.
                       </div>
                     </div>
                   )}
