@@ -37,6 +37,225 @@
         const { useState, useEffect } = React;
 
         const BrettonWoodsMultiplayer = () => {
+            // LOGIN/REGISTER COMPONENT
+// Add this at the beginning of the BrettonWoodsMultiplayer component
+
+const [isAuthenticated, setIsAuthenticated] = useState(false);
+const [username, setUsername] = useState('');
+const [showRegister, setShowRegister] = useState(false);
+
+useEffect(() => {
+  // Check if already logged in
+  const savedUsername = sessionStorage.getItem('brettonWoodsUsername');
+  const savedPlayerId = sessionStorage.getItem('brettonWoodsPlayerId');
+  
+  if (savedUsername && savedPlayerId) {
+    setUsername(savedUsername);
+    setIsAuthenticated(true);
+  }
+}, []);
+
+useEffect(() => {
+  // Handle authentication responses
+  socket.on('registerResult', (result) => {
+    if (result.success) {
+      sessionStorage.setItem('brettonWoodsPlayerId', result.playerId);
+      sessionStorage.setItem('brettonWoodsUsername', result.username);
+      setUsername(result.username);
+      setIsAuthenticated(true);
+    } else {
+      alert(result.message);
+    }
+  });
+
+  socket.on('loginResult', (result) => {
+    if (result.success) {
+      sessionStorage.setItem('brettonWoodsPlayerId', result.playerId);
+      sessionStorage.setItem('brettonWoodsUsername', result.username);
+      setUsername(result.username);
+      setIsAuthenticated(true);
+    } else {
+      alert(result.message);
+    }
+  });
+
+  return () => {
+    socket.off('registerResult');
+    socket.off('loginResult');
+  };
+}, []);
+
+const handleAuth = (e) => {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const user = formData.get('username');
+  const pass = formData.get('password');
+  
+  if (showRegister) {
+    socket.emit('register', { username: user, password: pass });
+  } else {
+    socket.emit('login', { username: user, password: pass });
+  }
+};
+
+const handleLogout = () => {
+  sessionStorage.clear();
+  setIsAuthenticated(false);
+  setUsername('');
+  window.location.reload();
+};
+
+// Show login screen if not authenticated
+if (!connected) {
+  return (
+    <div className="container">
+      <div className="card">
+        <p style={{ textAlign: 'center', padding: '40px' }}>
+          🔴 Connecting to 62.72.49.181:65002...
+        </p>
+      </div>
+    </div>
+  );
+}
+
+if (!isAuthenticated) {
+  return (
+    <div className="container">
+      <div className="header">
+        <h1>🌍 Bretton Woods Conference</h1>
+        <p>Educational Multiplayer Simulation</p>
+      </div>
+      
+      <div className="card" style={{ maxWidth: '400px', margin: '0 auto' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '30px' }}>
+          {showRegister ? 'Create Account' : 'Login'}
+        </h2>
+        
+        <form onSubmit={handleAuth}>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Username
+            </label>
+            <input
+              type="text"
+              name="username"
+              required
+              minLength="3"
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '1rem',
+                border: '2px solid #cbd5e1',
+                borderRadius: '6px'
+              }}
+              placeholder="Enter username (min 3 characters)"
+            />
+          </div>
+          
+          <div style={{ marginBottom: '30px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+              Password
+            </label>
+            <input
+              type="password"
+              name="password"
+              required
+              minLength="4"
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '1rem',
+                border: '2px solid #cbd5e1',
+                borderRadius: '6px'
+              }}
+              placeholder="Enter password (min 4 characters)"
+            />
+          </div>
+          
+          <button
+            type="submit"
+            className="btn-primary"
+            style={{ width: '100%', padding: '14px', fontSize: '1.125rem', marginBottom: '16px' }}
+          >
+            {showRegister ? '📝 Create Account' : '🔓 Login'}
+          </button>
+        </form>
+        
+        <div style={{ textAlign: 'center', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
+          <button
+            onClick={() => setShowRegister(!showRegister)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#3b82f6',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              textDecoration: 'underline'
+            }}
+          >
+            {showRegister 
+              ? 'Already have an account? Login' 
+              : "Don't have an account? Register"}
+          </button>
+        </div>
+        
+        <div style={{ 
+          marginTop: '30px', 
+          padding: '16px', 
+          background: '#f8fafc', 
+          borderRadius: '6px',
+          fontSize: '0.875rem',
+          color: '#64748b'
+        }}>
+          <p style={{ marginBottom: '8px' }}><strong>Note:</strong></p>
+          <ul style={{ marginLeft: '20px' }}>
+            <li>Usernames must be at least 3 characters</li>
+            <li>Passwords must be at least 4 characters</li>
+            <li>Your account persists across games</li>
+            <li>Don't share your password</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Show username in header for authenticated users
+const UserDisplay = () => (
+  <div style={{
+    position: 'fixed',
+    top: '10px',
+    left: '10px',
+    padding: '8px 16px',
+    background: '#eff6ff',
+    color: '#1e40af',
+    borderRadius: '6px',
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    zIndex: 1000,
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+  }}>
+    👤 {username}
+    <button
+      onClick={handleLogout}
+      style={{
+        marginLeft: '12px',
+        padding: '4px 8px',
+        background: '#dc2626',
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontSize: '0.75rem'
+      }}
+    >
+      Logout
+    </button>
+  </div>
+);
+
+// Add <UserDisplay /> to all screens after authentication
+
           const [playerId] = useState(() => {
             let id = sessionStorage.getItem('brettonWoodsPlayerId');
             if (!id) {
