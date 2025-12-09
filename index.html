@@ -368,6 +368,7 @@
           if (!gameStateData.gameStarted && gameStateData.gamePhase === 'lobby') {
             return (
               <div className="container">
+                <UserDisplay />
                 <ConnectionStatus />
                 <div className="header">
                   <h1>🌍 Bretton Woods 1944</h1>
@@ -466,69 +467,285 @@
 
           // Phase 2: Economic Management
           if (gameStateData.gamePhase === 'phase2' && gameStateData.phase2 && gameStateData.phase2.active) {
+            const currentYear = gameStateData.phase2.currentYear;
+            const yearlyData = gameStateData.phase2.yearlyData[currentYear];
+            const myCountryData = yearlyData ? yearlyData[playerCountry] : null;
+            const myPolicies = gameStateData.phase2.policies[currentYear] ? gameStateData.phase2.policies[currentYear][playerCountry] : null;
+            const allSubmitted = Object.keys(gameStateData.players).every(pid => {
+              const player = gameStateData.players[pid];
+              return gameStateData.phase2.policies[currentYear] && gameStateData.phase2.policies[currentYear][player.country];
+            });
+
+            const submitPolicies = (e) => {
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              const centralBankRate = formData.get('centralBankRate');
+              const exchangeRate = formData.get('exchangeRate');
+              const tariffRate = formData.get('tariffRate');
+              
+              socket.emit('setPhase2Policies', {
+                playerId,
+                centralBankRate: parseFloat(centralBankRate),
+                exchangeRate: parseFloat(exchangeRate),
+                tariffRate: parseFloat(tariffRate)
+              });
+            };
+
+            const advanceYear = () => {
+              socket.emit('advanceYear');
+            };
+
             return (
               <div className="container">
                 <UserDisplay />
                 <ConnectionStatus />
                 <div className="header">
                   <h1>📊 Post-War Economic Management</h1>
-                  <p>Phase 2: Implement the Bretton Woods Agreement</p>
+                  <p>Phase 2: Year {currentYear} of 1946-1952</p>
                 </div>
 
                 <div className="card">
-                  <h2 style={{ textAlign: 'center', marginBottom: '30px', color: '#16a34a' }}>
-                    🎉 Phase 1 Complete!
-                  </h2>
-                  <p style={{ textAlign: 'center', fontSize: '1.125rem', color: '#64748b', marginBottom: '40px' }}>
-                    The Bretton Woods Conference has concluded. Now it's time to implement the economic policies you agreed upon.
-                  </p>
-                  
-                  <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-                    <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', marginBottom: '30px' }}>
-                      <h3 style={{ marginBottom: '16px' }}>Current Scores (Phase 1):</h3>
-                      <div style={{ display: 'grid', gap: '12px' }}>
-                        {Object.entries(gameStateData.scores).sort((a, b) => b[1] - a[1]).map(([country, score]) => {
-                          const countryData = countries[country];
-                          return (
-                            <div key={country} style={{ 
-                              display: 'flex', 
-                              justifyContent: 'space-between',
-                              padding: '12px',
-                              background: 'white',
-                              borderRadius: '6px',
-                              borderLeft: '4px solid ' + (country === playerCountry ? '#3b82f6' : '#cbd5e1')
-                            }}>
-                              <span className={countryData.textColor} style={{ fontWeight: 'bold' }}>
-                                {countryData.name}
-                              </span>
-                              <span style={{ fontWeight: 'bold' }}>{score} points</span>
-                            </div>
-                          );
-                        })}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                    <div>
+                      <h2 style={{ fontSize: '1.5rem', color: '#1e293b', marginBottom: '8px' }}>
+                        Year {currentYear} ({currentYear - 1945} of 7)
+                      </h2>
+                      <p style={{ color: '#64748b', fontSize: '0.9rem' }}>
+                        Playing as: <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>{countries[playerCountry].name}</span>
+                      </p>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Phase 1 Score</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#16a34a' }}>
+                        {gameStateData.scores[playerCountry]} pts
                       </div>
                     </div>
-
-                    <div style={{ padding: '20px', background: '#eff6ff', borderRadius: '8px', marginBottom: '30px' }}>
-                      <h3 style={{ marginBottom: '16px', color: '#1e40af' }}>Phase 2: 1946-1952</h3>
-                      <p style={{ color: '#64748b', fontSize: '0.9rem' }}>
-                        For the next 7 years, you'll manage your country's economy. Set interest rates, exchange rates, 
-                        and tariffs each year. Your economic performance will add to your Phase 1 score!
-                      </p>
-                    </div>
-
-                    <div style={{ textAlign: 'center' }}>
-                      <p style={{ fontSize: '1.5rem', marginBottom: '20px' }}>
-                        🚧 Phase 2 UI Coming Soon 🚧
-                      </p>
-                      <p style={{ color: '#64748b', marginBottom: '30px' }}>
-                        The economic management phase is implemented on the server but the full UI is not yet complete.
-                        For now, you can reset the game to play Phase 1 again.
-                      </p>
-                      <button className="btn-primary" onClick={resetGame}>
-                        🔄 Reset and Play Again
-                      </button>
-                    </div>
                   </div>
+
+                  {myCountryData && (
+                    <div style={{ marginBottom: '30px' }}>
+                      <h3 style={{ fontSize: '1.125rem', marginBottom: '16px' }}>📈 Economic Dashboard</h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                        <div style={{ padding: '16px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                          <div style={{ fontSize: '0.875rem', color: '#0369a1', marginBottom: '4px' }}>GDP Growth</div>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#0c4a6e' }}>
+                            {myCountryData.gdpGrowth ? myCountryData.gdpGrowth.toFixed(1) : '0.0'}%
+                          </div>
+                        </div>
+                        <div style={{ padding: '16px', background: '#fef3c7', borderRadius: '8px', border: '1px solid #fde047' }}>
+                          <div style={{ fontSize: '0.875rem', color: '#a16207', marginBottom: '4px' }}>Unemployment</div>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#78350f' }}>
+                            {myCountryData.unemployment ? myCountryData.unemployment.toFixed(1) : '0.0'}%
+                          </div>
+                        </div>
+                        <div style={{ padding: '16px', background: '#fee2e2', borderRadius: '8px', border: '1px solid #fca5a5' }}>
+                          <div style={{ fontSize: '0.875rem', color: '#b91c1c', marginBottom: '4px' }}>Inflation</div>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#7f1d1d' }}>
+                            {myCountryData.inflation ? myCountryData.inflation.toFixed(1) : '0.0'}%
+                          </div>
+                        </div>
+                        <div style={{ padding: '16px', background: '#dcfce7', borderRadius: '8px', border: '1px solid #86efac' }}>
+                          <div style={{ fontSize: '0.875rem', color: '#15803d', marginBottom: '4px' }}>Trade Balance</div>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#14532d' }}>
+                            ${myCountryData.tradeBalance ? (myCountryData.tradeBalance / 1000).toFixed(1) : '0.0'}B
+                          </div>
+                        </div>
+                        <div style={{ padding: '16px', background: '#fef3c7', borderRadius: '8px', border: '1px solid #fde047' }}>
+                          <div style={{ fontSize: '0.875rem', color: '#a16207', marginBottom: '4px' }}>Gold Reserves</div>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#78350f' }}>
+                            ${myCountryData.goldReserves ? (myCountryData.goldReserves / 1000).toFixed(1) : '0.0'}B
+                          </div>
+                        </div>
+                        <div style={{ padding: '16px', background: '#e0e7ff', borderRadius: '8px', border: '1px solid #c7d2fe' }}>
+                          <div style={{ fontSize: '0.875rem', color: '#4338ca', marginBottom: '4px' }}>Industrial Output</div>
+                          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#312e81' }}>
+                            {myCountryData.industrialOutput ? myCountryData.industrialOutput.toFixed(0) : '0'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {!myPolicies ? (
+                    <div style={{ marginBottom: '30px' }}>
+                      <h3 style={{ fontSize: '1.125rem', marginBottom: '16px' }}>⚙️ Set Economic Policies for {currentYear}</h3>
+                      <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '20px' }}>
+                        Choose your macroeconomic policies carefully. They will affect growth, unemployment, inflation, and trade.
+                      </p>
+
+                      <form onSubmit={submitPolicies}>
+                        <div style={{ display: 'grid', gap: '24px', maxWidth: '600px', margin: '0 auto' }}>
+                          
+                          {/* Central Bank Rate */}
+                          <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px' }}>
+                            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '12px' }}>
+                              🏦 Central Bank Interest Rate
+                            </label>
+                            <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '12px' }}>
+                              Lower rates stimulate growth but risk inflation. Higher rates control inflation but slow growth.
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                              <input
+                                type="range"
+                                name="centralBankRate"
+                                min="0"
+                                max="10"
+                                step="0.5"
+                                defaultValue="3"
+                                style={{ flex: 1 }}
+                                onInput={(e) => e.target.nextElementSibling.textContent = e.target.value + '%'}
+                              />
+                              <span style={{ minWidth: '60px', fontWeight: 'bold', fontSize: '1.125rem' }}>3%</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+                              <span>0% (Loose)</span>
+                              <span>5% (Optimal)</span>
+                              <span>10% (Tight)</span>
+                            </div>
+                          </div>
+
+                          {/* Exchange Rate */}
+                          <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px' }}>
+                            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '12px' }}>
+                              💱 Exchange Rate vs USD
+                            </label>
+                            <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '12px' }}>
+                              Weak currency helps exports. Strong currency helps imports. Balance is key.
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                              <input
+                                type="range"
+                                name="exchangeRate"
+                                min="0.5"
+                                max="2.0"
+                                step="0.1"
+                                defaultValue="1.0"
+                                style={{ flex: 1 }}
+                                onInput={(e) => e.target.nextElementSibling.textContent = e.target.value}
+                              />
+                              <span style={{ minWidth: '60px', fontWeight: 'bold', fontSize: '1.125rem' }}>1.0</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+                              <span>0.5 (Weak)</span>
+                              <span>1.0 (Parity)</span>
+                              <span>2.0 (Strong)</span>
+                            </div>
+                          </div>
+
+                          {/* Tariff Rate */}
+                          <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px' }}>
+                            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '12px' }}>
+                              📦 Average Tariff Rate
+                            </label>
+                            <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '12px' }}>
+                              High tariffs protect domestic industry but reduce trade. Low tariffs increase efficiency.
+                            </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                              <input
+                                type="range"
+                                name="tariffRate"
+                                min="0"
+                                max="50"
+                                step="5"
+                                defaultValue="10"
+                                style={{ flex: 1 }}
+                                onInput={(e) => e.target.nextElementSibling.textContent = e.target.value + '%'}
+                              />
+                              <span style={{ minWidth: '60px', fontWeight: 'bold', fontSize: '1.125rem' }}>10%</span>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
+                              <span>0% (Free Trade)</span>
+                              <span>25% (Moderate)</span>
+                              <span>50% (Protectionist)</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ textAlign: 'center', marginTop: '30px' }}>
+                          <button type="submit" className="btn-primary" style={{ fontSize: '1.125rem', padding: '14px 32px' }}>
+                            📋 Submit Economic Policies
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  ) : (
+                    <div style={{ marginBottom: '30px' }}>
+                      <div style={{ padding: '20px', background: '#dcfce7', borderRadius: '8px', marginBottom: '20px', border: '1px solid #86efac' }}>
+                        <h3 style={{ fontSize: '1.125rem', color: '#15803d', marginBottom: '12px' }}>
+                          ✅ Your Policies Submitted for {currentYear}
+                        </h3>
+                        <div style={{ display: 'grid', gap: '12px' }}>
+                          <div>
+                            <span style={{ color: '#64748b' }}>Central Bank Rate:</span>{' '}
+                            <span style={{ fontWeight: 'bold' }}>{myPolicies.centralBankRate}%</span>
+                          </div>
+                          <div>
+                            <span style={{ color: '#64748b' }}>Exchange Rate:</span>{' '}
+                            <span style={{ fontWeight: 'bold' }}>{myPolicies.exchangeRate}</span>
+                          </div>
+                          <div>
+                            <span style={{ color: '#64748b' }}>Tariff Rate:</span>{' '}
+                            <span style={{ fontWeight: 'bold' }}>{myPolicies.tariffRate}%</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'center' }}>
+                        <p style={{ color: '#64748b', marginBottom: '16px' }}>
+                          ⏳ Waiting for other countries to submit their policies...
+                        </p>
+                        <p style={{ fontSize: '0.875rem', color: '#94a3b8' }}>
+                          {Object.keys(gameStateData.players).filter(pid => {
+                            const player = gameStateData.players[pid];
+                            return gameStateData.phase2.policies[currentYear] && gameStateData.phase2.policies[currentYear][player.country];
+                          }).length} / {Object.keys(gameStateData.players).length} submitted
+                        </p>
+
+                        {allSubmitted && (
+                          <button className="btn-success" onClick={advanceYear} style={{ marginTop: '20px', fontSize: '1.125rem', padding: '14px 32px' }}>
+                            📊 Calculate Year Results & Continue
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Historical Data */}
+                  {Object.keys(gameStateData.phase2.yearlyData).length > 1 && (
+                    <div style={{ marginTop: '30px', paddingTop: '30px', borderTop: '2px solid #e2e8f0' }}>
+                      <h3 style={{ fontSize: '1.125rem', marginBottom: '16px' }}>📜 Historical Performance</h3>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', fontSize: '0.875rem', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ background: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}>
+                              <th style={{ padding: '8px', textAlign: 'left' }}>Year</th>
+                              <th style={{ padding: '8px', textAlign: 'right' }}>GDP</th>
+                              <th style={{ padding: '8px', textAlign: 'right' }}>Unemp</th>
+                              <th style={{ padding: '8px', textAlign: 'right' }}>Inflation</th>
+                              <th style={{ padding: '8px', textAlign: 'right' }}>Trade</th>
+                              <th style={{ padding: '8px', textAlign: 'right' }}>Gold</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {Object.keys(gameStateData.phase2.yearlyData).sort().map(year => {
+                              const data = gameStateData.phase2.yearlyData[year][playerCountry];
+                              if (!data) return null;
+                              return (
+                                <tr key={year} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                  <td style={{ padding: '8px', fontWeight: 'bold' }}>{year}</td>
+                                  <td style={{ padding: '8px', textAlign: 'right' }}>{data.gdpGrowth ? data.gdpGrowth.toFixed(1) + '%' : '-'}</td>
+                                  <td style={{ padding: '8px', textAlign: 'right' }}>{data.unemployment ? data.unemployment.toFixed(1) + '%' : '-'}</td>
+                                  <td style={{ padding: '8px', textAlign: 'right' }}>{data.inflation ? data.inflation.toFixed(1) + '%' : '-'}</td>
+                                  <td style={{ padding: '8px', textAlign: 'right' }}>${data.tradeBalance ? (data.tradeBalance / 1000).toFixed(1) : '0.0'}B</td>
+                                  <td style={{ padding: '8px', textAlign: 'right' }}>${data.goldReserves ? (data.goldReserves / 1000).toFixed(1) : '0.0'}B</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             );
