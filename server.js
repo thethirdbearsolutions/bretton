@@ -293,7 +293,14 @@ io.on('connection', (socket) => {
         gameState.phase2.currentYear++;
         gameState.readyPlayers = [];
       } else {
-        // End of Phase 2
+        // End of Phase 2 - Award China survival bonus
+        Object.keys(gameState.players).forEach(playerId => {
+          const player = gameState.players[playerId];
+          if (player.country === 'China') {
+            gameState.scores.China += 30; // Survival bonus
+            console.log(`China awarded +30 points for navigating civil war and reconstruction`);
+          }
+        });
         gameState.gamePhase = 'complete';
       }
       
@@ -403,6 +410,21 @@ function calculateYearEconomics() {
     // Bretton Woods agreement bonus
     gdpGrowth += agreementBonus[country] || 0;
     
+    // China Civil War penalties (1946-1949)
+    let civilWarPenalty = {
+      gdp: 0,
+      inflation: 0,
+      trade: 0
+    };
+    if (country === 'China' && currentYear >= 1946 && currentYear <= 1949) {
+      civilWarPenalty.gdp = -2.0;     // GDP growth penalty
+      civilWarPenalty.inflation = 10;  // Hyperinflation
+      civilWarPenalty.trade = -500;    // Trade disruption
+    }
+    
+    // Apply civil war GDP penalty
+    gdpGrowth += civilWarPenalty.gdp;
+    
     // Random shock (-1 to +1)
     const randomShock = (Math.random() - 0.5) * 2;
     gdpGrowth += randomShock;
@@ -416,6 +438,9 @@ function calculateYearEconomics() {
       inflation -= (centralBankRate - 5.0) * 1.5;
     }
     inflation = Math.max(0, inflation + (Math.random() - 0.5) * 3);
+    
+    // Apply China civil war hyperinflation
+    inflation += civilWarPenalty.inflation;
     
     // Calculate unemployment (inverse of growth)
     let unemployment = prevData.unemployment;
@@ -436,6 +461,9 @@ function calculateYearEconomics() {
     const growthEffect = gdpGrowth * -100;
     
     tradeBalance += exchangeEffect + tariffEffect + growthEffect + (Math.random() - 0.5) * 200;
+    
+    // Apply China civil war trade disruption
+    tradeBalance += civilWarPenalty.trade;
     
     // Calculate gold reserves
     let goldReserves = prevData.goldReserves;

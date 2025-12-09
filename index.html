@@ -495,6 +495,10 @@
               socket.emit('advanceYear');
             };
 
+            // China Civil War detection
+            const isChinaCivilWar = playerCountry === 'China' && currentYear >= 1946 && currentYear <= 1949;
+            const isChinaCommunist = playerCountry === 'China' && currentYear >= 1950;
+
             return (
               <div className="container">
                 <UserDisplay />
@@ -521,6 +525,96 @@
                       </div>
                     </div>
                   </div>
+
+                  {/* China Civil War Banner */}
+                  {isChinaCivilWar && (
+                    <div style={{
+                      padding: '20px',
+                      background: '#fef2f2',
+                      border: '2px solid #dc2626',
+                      borderRadius: '8px',
+                      marginBottom: '30px'
+                    }}>
+                      <div style={{ 
+                        fontWeight: 'bold', 
+                        color: '#dc2626', 
+                        fontSize: '1.125rem',
+                        marginBottom: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        ⚠️ CHINESE CIVIL WAR ({currentYear})
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#7f1d1d', marginBottom: '8px' }}>
+                        The Nationalist government faces Communist insurgency. Your economy suffers severe disruption.
+                      </div>
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '8px',
+                        marginTop: '12px',
+                        padding: '12px',
+                        background: '#fee2e2',
+                        borderRadius: '6px'
+                      }}>
+                        <div style={{ fontSize: '0.875rem', color: '#991b1b' }}>
+                          <strong>GDP:</strong> -2% penalty
+                        </div>
+                        <div style={{ fontSize: '0.875rem', color: '#991b1b' }}>
+                          <strong>Inflation:</strong> +10% (hyperinflation)
+                        </div>
+                        <div style={{ fontSize: '0.875rem', color: '#991b1b' }}>
+                          <strong>Trade:</strong> -$500M disruption
+                        </div>
+                      </div>
+                      <div style={{ 
+                        marginTop: '12px', 
+                        fontSize: '0.875rem', 
+                        color: '#7f1d1d',
+                        fontStyle: 'italic'
+                      }}>
+                        {currentYear < 1949 
+                          ? `${1950 - currentYear} year${1950 - currentYear > 1 ? 's' : ''} until resolution (October 1949)`
+                          : 'Communist victory imminent - transition coming in 1950'}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* China Communist Reconstruction Banner */}
+                  {isChinaCommunist && (
+                    <div style={{
+                      padding: '20px',
+                      background: '#fef3c7',
+                      border: '2px solid #d97706',
+                      borderRadius: '8px',
+                      marginBottom: '30px'
+                    }}>
+                      <div style={{ 
+                        fontWeight: 'bold', 
+                        color: '#92400e', 
+                        fontSize: '1.125rem',
+                        marginBottom: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        🏭 PEOPLE'S REPUBLIC OF CHINA - RECONSTRUCTION ERA
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: '#78350f', marginBottom: '8px' }}>
+                        Communist government proclaimed October 1, 1949. Economy transitioning to planned system.
+                      </div>
+                      <div style={{ 
+                        padding: '12px',
+                        background: '#fde68a',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        color: '#78350f'
+                      }}>
+                        <strong>Reconstruction Bonus:</strong> Civil war penalties removed. Centralized planning enables rapid recovery.
+                      </div>
+                    </div>
+                  )}
 
                   {myCountryData && (
                     <div style={{ marginBottom: '30px' }}>
@@ -568,21 +662,29 @@
 
                   {!myPolicies ? (
                     <div style={{ marginBottom: '30px' }}>
-                      <h3 style={{ fontSize: '1.125rem', marginBottom: '16px' }}>⚙️ Set Economic Policies for {currentYear}</h3>
+                      <h3 style={{ fontSize: '1.125rem', marginBottom: '16px' }}>
+                        ⚙️ Set Economic Policies for {currentYear}
+                      </h3>
                       <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '20px' }}>
-                        Choose your macroeconomic policies carefully. They will affect growth, unemployment, inflation, and trade.
+                        {(playerCountry === 'USSR' || isChinaCommunist)
+                          ? 'Set central planning priorities. Your command economy operates differently but still affects economic outcomes.'
+                          : 'Choose your macroeconomic policies carefully. They will affect growth, unemployment, inflation, and trade.'}
                       </p>
 
                       <form onSubmit={submitPolicies}>
                         <div style={{ display: 'grid', gap: '24px', maxWidth: '600px', margin: '0 auto' }}>
                           
-                          {/* Central Bank Rate */}
+                          {/* Central Bank Rate / Credit Allocation */}
                           <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px' }}>
                             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '12px' }}>
-                              🏦 Central Bank Interest Rate
+                              {(playerCountry === 'USSR' || isChinaCommunist)
+                                ? '🏭 State Credit Allocation'
+                                : '🏦 Central Bank Interest Rate'}
                             </label>
                             <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '12px' }}>
-                              Lower rates stimulate growth but risk inflation. Higher rates control inflation but slow growth.
+                              {(playerCountry === 'USSR' || isChinaCommunist)
+                                ? 'Loose credit fuels production but creates shortages. Tight credit controls inflation but limits growth.'
+                                : 'Lower rates stimulate growth but risk inflation. Higher rates control inflation but slow growth.'}
                             </p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                               <input
@@ -598,19 +700,33 @@
                               <span style={{ minWidth: '60px', fontWeight: 'bold', fontSize: '1.125rem' }}>3%</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
-                              <span>0% (Loose)</span>
-                              <span>5% (Optimal)</span>
-                              <span>10% (Tight)</span>
+                              {(playerCountry === 'USSR' || isChinaCommunist) ? (
+                                <>
+                                  <span>0% (Loose)</span>
+                                  <span>5% (Balanced)</span>
+                                  <span>10% (Tight)</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>0% (Loose)</span>
+                                  <span>5% (Optimal)</span>
+                                  <span>10% (Tight)</span>
+                                </>
+                              )}
                             </div>
                           </div>
 
-                          {/* Exchange Rate */}
+                          {/* Exchange Rate / Foreign Trade Priority */}
                           <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px' }}>
                             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '12px' }}>
-                              💱 Exchange Rate vs USD
+                              {(playerCountry === 'USSR' || isChinaCommunist)
+                                ? '🌍 Foreign Trade Priority'
+                                : '💱 Exchange Rate vs USD'}
                             </label>
                             <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '12px' }}>
-                              Weak currency helps exports. Strong currency helps imports. Balance is key.
+                              {(playerCountry === 'USSR' || isChinaCommunist)
+                                ? 'Export focus (low) earns hard currency. Import focus (high) acquires Western technology and goods.'
+                                : 'Weak currency helps exports. Strong currency helps imports. Balance is key.'}
                             </p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                               <input
@@ -626,19 +742,33 @@
                               <span style={{ minWidth: '60px', fontWeight: 'bold', fontSize: '1.125rem' }}>1.0</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
-                              <span>0.5 (Weak)</span>
-                              <span>1.0 (Parity)</span>
-                              <span>2.0 (Strong)</span>
+                              {(playerCountry === 'USSR' || isChinaCommunist) ? (
+                                <>
+                                  <span>0.5 (Export)</span>
+                                  <span>1.0 (Balanced)</span>
+                                  <span>2.0 (Import)</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>0.5 (Weak)</span>
+                                  <span>1.0 (Parity)</span>
+                                  <span>2.0 (Strong)</span>
+                                </>
+                              )}
                             </div>
                           </div>
 
-                          {/* Tariff Rate */}
+                          {/* Tariff Rate / Trade Barrier Level */}
                           <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px' }}>
                             <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '12px' }}>
-                              📦 Average Tariff Rate
+                              {(playerCountry === 'USSR' || isChinaCommunist)
+                                ? '🚧 Trade Barrier Level'
+                                : '📦 Average Tariff Rate'}
                             </label>
                             <p style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '12px' }}>
-                              High tariffs protect domestic industry but reduce trade. Low tariffs increase efficiency.
+                              {(playerCountry === 'USSR' || isChinaCommunist)
+                                ? 'Low barriers allow Western goods and ideas. High barriers ensure autarky and ideological purity.'
+                                : 'High tariffs protect domestic industry but reduce trade. Low tariffs increase efficiency.'}
                             </p>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                               <input
@@ -654,16 +784,28 @@
                               <span style={{ minWidth: '60px', fontWeight: 'bold', fontSize: '1.125rem' }}>10%</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', marginTop: '4px' }}>
-                              <span>0% (Free Trade)</span>
-                              <span>25% (Moderate)</span>
-                              <span>50% (Protectionist)</span>
+                              {(playerCountry === 'USSR' || isChinaCommunist) ? (
+                                <>
+                                  <span>0% (Open)</span>
+                                  <span>25% (Moderate)</span>
+                                  <span>50% (Autarky)</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>0% (Free Trade)</span>
+                                  <span>25% (Moderate)</span>
+                                  <span>50% (Protectionist)</span>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
 
                         <div style={{ textAlign: 'center', marginTop: '30px' }}>
                           <button type="submit" className="btn-primary" style={{ fontSize: '1.125rem', padding: '14px 32px' }}>
-                            📋 Submit Economic Policies
+                            {(playerCountry === 'USSR' || isChinaCommunist)
+                              ? '📋 Submit Five-Year Plan Priorities'
+                              : '📋 Submit Economic Policies'}
                           </button>
                         </div>
                       </form>
