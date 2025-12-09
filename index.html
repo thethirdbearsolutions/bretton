@@ -341,6 +341,20 @@
           }
 
           const { countries, economicData, issues } = gameData;
+          
+          // Safety check: ensure countries object exists
+          if (!countries || typeof countries !== 'object') {
+            return (
+              <div className="container">
+                <div className="card">
+                  <p style={{ textAlign: 'center', padding: '40px', color: '#dc2626' }}>
+                    ⚠️ Error: Game data is corrupted. Please refresh the page.
+                  </p>
+                </div>
+              </div>
+            );
+          }
+          
           const currentIssue = issues[gameStateData.currentRound - 1];
           const availableCountries = Object.keys(countries).filter(
             country => !Object.values(gameStateData.players).some(p => p.country === country)
@@ -399,8 +413,8 @@
                           borderLeft: '4px solid ' + (id === playerId ? '#3b82f6' : '#cbd5e1')
                         }}>
                           <div>
-                            <span className={countries[player.country].textColor} style={{ fontWeight: 'bold' }}>
-                              {countries[player.country].name}
+                            <span className={countries[player.country]?.textColor || 'text-blue-600'} style={{ fontWeight: 'bold' }}>
+                              {countries[player.country]?.name || player.country || 'Unknown'}
                             </span>
                             {id === playerId && <span style={{ marginLeft: '8px', fontSize: '0.875rem', color: '#3b82f6' }}>(You)</span>}
                           </div>
@@ -420,27 +434,31 @@
                     <div>
                       <h3 style={{ fontSize: '1.125rem', marginBottom: '16px' }}>Select Your Nation</h3>
                       <div className="country-grid">
-                        {availableCountries.map(key => (
-                          <div key={key} className={`country-card ${countries[key].color}`} onClick={() => joinGame(key)}>
-                            <h3>{countries[key].name}</h3>
-                            <p style={{ fontSize: '0.875rem', marginBottom: '12px', opacity: '0.9' }}>
-                              {countries[key].economicPosition}
-                            </p>
-                            <ul>
-                              {countries[key].objectives.slice(0, 2).map((obj, idx) => (
-                                <li key={idx}>{obj}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
+                        {availableCountries.map(key => {
+                          const country = countries[key];
+                          if (!country) return null;
+                          return (
+                            <div key={key} className={`country-card ${country.color}`} onClick={() => joinGame(key)}>
+                              <h3>{country.name}</h3>
+                              <p style={{ fontSize: '0.875rem', marginBottom: '12px', opacity: '0.9' }}>
+                                {country.economicPosition}
+                              </p>
+                              <ul>
+                                {country.objectives.slice(0, 2).map((obj, idx) => (
+                                  <li key={idx}>{obj}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   ) : (
                     <div style={{ textAlign: 'center' }}>
                       <div style={{ marginBottom: '20px', padding: '20px', background: '#f8fafc', borderRadius: '8px' }}>
                         <p style={{ color: '#64748b', marginBottom: '8px' }}>You are playing as</p>
-                        <h2 className={countries[playerCountry].textColor} style={{ fontSize: '1.75rem' }}>
-                          {countries[playerCountry].name}
+                        <h2 className={countries[playerCountry]?.textColor || 'text-blue-600'} style={{ fontSize: '1.75rem' }}>
+                          {countries[playerCountry]?.name || playerCountry || 'Unknown'}
                         </h2>
                       </div>
                       
@@ -528,7 +546,7 @@
                             ? 'India (Partition Year)'
                             : playerCountry === 'India' && currentYear >= 1948
                             ? 'Republic of India'
-                            : countries[playerCountry].name}
+                            : countries[playerCountry]?.name || playerCountry || 'Unknown'}
                         </span>
                       </p>
                     </div>
@@ -880,6 +898,97 @@
                     </div>
                   )}
 
+                  {/* Military Deployment Info Panel */}
+                  {gameStateData.militaryDeployments && gameStateData.militaryDeployments[playerCountry] && (
+                    <details style={{
+                      marginBottom: '30px',
+                      padding: '16px',
+                      background: '#f8fafc',
+                      border: '2px solid #cbd5e1',
+                      borderRadius: '8px'
+                    }}>
+                      <summary style={{
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: '1.125rem',
+                        color: '#1e293b',
+                        padding: '8px'
+                      }}>
+                        🗺️ View Your Military Deployments
+                      </summary>
+                      <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+                        <div style={{ 
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                          gap: '12px',
+                          marginBottom: '16px'
+                        }}>
+                          <div style={{ padding: '12px', background: 'white', borderRadius: '6px' }}>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '4px' }}>Total Troops</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                              {(gameStateData.militaryDeployments[playerCountry].totalTroops / 1000000).toFixed(1)}M
+                            </div>
+                          </div>
+                          <div style={{ padding: '12px', background: 'white', borderRadius: '6px' }}>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '4px' }}>Military Budget</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                              ${(gameStateData.militaryDeployments[playerCountry].militaryBudget / 1000).toFixed(1)}B
+                            </div>
+                          </div>
+                          <div style={{ padding: '12px', background: 'white', borderRadius: '6px' }}>
+                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '4px' }}>Deployments</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>
+                              {gameStateData.militaryDeployments[playerCountry].bases.length}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div style={{ fontSize: '0.875rem' }}>
+                          <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#475569' }}>Deployment Locations:</div>
+                          {gameStateData.militaryDeployments[playerCountry].bases.map((base, idx) => (
+                            <div key={idx} style={{ 
+                              padding: '8px',
+                              background: 'white',
+                              borderRadius: '4px',
+                              marginBottom: '6px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}>
+                              <div>
+                                <div style={{ fontWeight: 'bold', color: '#1e293b' }}>{base.name}</div>
+                                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{base.description}</div>
+                              </div>
+                              <div style={{ 
+                                fontSize: '0.875rem', 
+                                fontWeight: 'bold',
+                                color: '#3b82f6',
+                                whiteSpace: 'nowrap',
+                                marginLeft: '12px'
+                              }}>
+                                {(base.troops / 1000).toFixed(0)}K
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {gameStateData.militaryDeployments[playerCountry].notes && (
+                          <div style={{ 
+                            marginTop: '12px',
+                            padding: '12px',
+                            background: '#fef3c7',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            color: '#92400e',
+                            fontStyle: 'italic'
+                          }}>
+                            📝 {gameStateData.militaryDeployments[playerCountry].notes}
+                          </div>
+                        )}
+                      </div>
+                    </details>
+                  )}
+
                   {myCountryData && (
                     <div style={{ marginBottom: '30px' }}>
                       <h3 style={{ fontSize: '1.125rem', marginBottom: '16px' }}>📈 Economic Dashboard</h3>
@@ -1178,7 +1287,7 @@
                   <div style={{ textAlign: 'center', marginBottom: '40px' }}>
                     <h2 style={{ fontSize: '2rem', marginBottom: '16px', color: '#1e293b' }}>
                       {myRank === 1 ? '🥇' : myRank === 2 ? '🥈' : myRank === 3 ? '🥉' : ''}
-                      {' '}{countries[myCountry].name}
+                      {' '}{countries[myCountry]?.name || myCountry || 'Unknown'}
                     </h2>
                     <div style={{ fontSize: '1.25rem', color: '#64748b', marginBottom: '8px' }}>
                       Rank: {myRank} of {sortedScores.length}
@@ -1324,7 +1433,7 @@
                               </div>
                               <div>
                                 <div style={{ fontWeight: 'bold', fontSize: '1.125rem' }}>
-                                  {countries[country].name}
+                                  {countries[country]?.name || country}
                                 </div>
                                 {countryAchievements && countryAchievements.list.length > 0 && (
                                   <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
@@ -1339,6 +1448,180 @@
                           </div>
                         );
                       })}
+                    </div>
+                  </div>
+
+                  {/* Military Deployment Map */}
+                  <div style={{ marginTop: '40px', marginBottom: '40px' }}>
+                    <h3 style={{ fontSize: '1.5rem', marginBottom: '24px', textAlign: 'center' }}>
+                      🗺️ Global Military Deployments (1946-1952)
+                    </h3>
+                    
+                    {/* Military Stats Cards */}
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                      gap: '20px',
+                      marginBottom: '30px'
+                    }}>
+                      {Object.entries(gameStateData.militaryDeployments || {})
+                        .sort((a, b) => b[1].totalTroops - a[1].totalTroops)
+                        .map(([country, data]) => {
+                          const countryData = countries[country];
+                          if (!countryData) return null;
+                          
+                          return (
+                            <div key={country} style={{
+                              padding: '20px',
+                              background: 'white',
+                              border: `3px solid ${countryData.color === 'bg-blue-600' ? '#2563eb' :
+                                                   countryData.color === 'bg-red-600' ? '#dc2626' :
+                                                   countryData.color === 'bg-purple-600' ? '#9333ea' :
+                                                   countryData.color === 'bg-amber-600' ? '#d97706' :
+                                                   countryData.color === 'bg-green-600' ? '#16a34a' :
+                                                   countryData.color === 'bg-orange-600' ? '#ea580c' :
+                                                   countryData.color === 'bg-cyan-600' ? '#0891b2' : '#3b82f6'}`,
+                              borderRadius: '12px'
+                            }}>
+                              <div style={{ 
+                                fontSize: '1.25rem', 
+                                fontWeight: 'bold', 
+                                marginBottom: '12px',
+                                color: '#1e293b'
+                              }}>
+                                {countryData.name}
+                              </div>
+                              
+                              <div style={{ 
+                                display: 'grid', 
+                                gap: '8px',
+                                fontSize: '0.875rem'
+                              }}>
+                                <div style={{ 
+                                  display: 'flex', 
+                                  justifyContent: 'space-between',
+                                  padding: '8px',
+                                  background: '#f8fafc',
+                                  borderRadius: '6px'
+                                }}>
+                                  <span style={{ color: '#64748b' }}>👥 Total Troops:</span>
+                                  <span style={{ fontWeight: 'bold' }}>
+                                    {(data.totalTroops / 1000000).toFixed(1)}M
+                                  </span>
+                                </div>
+                                
+                                <div style={{ 
+                                  display: 'flex', 
+                                  justifyContent: 'space-between',
+                                  padding: '8px',
+                                  background: '#f8fafc',
+                                  borderRadius: '6px'
+                                }}>
+                                  <span style={{ color: '#64748b' }}>💰 Military Budget:</span>
+                                  <span style={{ fontWeight: 'bold' }}>
+                                    ${(data.militaryBudget / 1000).toFixed(1)}B
+                                  </span>
+                                </div>
+                                
+                                <div style={{ 
+                                  display: 'flex', 
+                                  justifyContent: 'space-between',
+                                  padding: '8px',
+                                  background: '#f8fafc',
+                                  borderRadius: '6px'
+                                }}>
+                                  <span style={{ color: '#64748b' }}>🎯 Deployments:</span>
+                                  <span style={{ fontWeight: 'bold' }}>
+                                    {data.bases.length} bases
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              {/* Base List */}
+                              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#64748b', marginBottom: '8px' }}>
+                                  MAJOR DEPLOYMENTS:
+                                </div>
+                                {data.bases.slice(0, 3).map((base, idx) => (
+                                  <div key={idx} style={{ 
+                                    fontSize: '0.75rem', 
+                                    color: '#475569',
+                                    marginBottom: '4px',
+                                    paddingLeft: '8px'
+                                  }}>
+                                    • {base.name}: {(base.troops / 1000).toFixed(0)}K troops
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                    
+                    {/* World Map */}
+                    <div style={{
+                      background: 'white',
+                      padding: '24px',
+                      borderRadius: '12px',
+                      border: '2px solid #e2e8f0'
+                    }}>
+                      <h4 style={{ 
+                        fontSize: '1.125rem', 
+                        marginBottom: '16px',
+                        textAlign: 'center',
+                        color: '#1e293b'
+                      }}>
+                        Cold War Military Presence
+                      </h4>
+                      
+                      <div style={{ 
+                        position: 'relative',
+                        width: '100%',
+                        paddingBottom: '50%',
+                        background: '#f1f5f9',
+                        borderRadius: '8px',
+                        overflow: 'hidden'
+                      }}>
+                        <iframe 
+                          src="/world-map.svg" 
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            border: 'none'
+                          }}
+                          title="World Military Deployments"
+                        />
+                      </div>
+                      
+                      <div style={{ 
+                        marginTop: '16px',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '16px',
+                        justifyContent: 'center',
+                        fontSize: '0.75rem'
+                      }}>
+                        {Object.entries(countries).map(([code, data]) => (
+                          <div key={code} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{
+                              width: '16px',
+                              height: '16px',
+                              background: data.color === 'bg-blue-600' ? '#2563eb' :
+                                         data.color === 'bg-red-600' ? '#dc2626' :
+                                         data.color === 'bg-purple-600' ? '#9333ea' :
+                                         data.color === 'bg-amber-600' ? '#d97706' :
+                                         data.color === 'bg-green-600' ? '#16a34a' :
+                                         data.color === 'bg-orange-600' ? '#ea580c' :
+                                         data.color === 'bg-cyan-600' ? '#0891b2' : '#3b82f6',
+                              borderRadius: '3px'
+                            }} />
+                            <span>{data.name}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
