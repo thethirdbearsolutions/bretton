@@ -754,11 +754,13 @@
 
             return (
               <div className="container">
-                <div className="breadcrumb">
-                  <button onClick={handleLeaveRoom}>← Back to Lobby</button>
-                  <span>/</span>
-                  <span>{currentRoom.name}</span>
-                </div>
+                {userRole === 'superadmin' && (
+                  <div className="breadcrumb">
+                    <button onClick={handleLeaveRoom}>← Back to Lobby</button>
+                    <span>/</span>
+                    <span>{currentRoom.name}</span>
+                  </div>
+                )}
 
                 <div style={{ 
                   position: 'fixed', 
@@ -865,7 +867,22 @@
                     </div>
                   </div>
 
-                  {!playerCountry ? (
+                  {userRole === 'superadmin' ? (
+                    <div style={{
+                      padding: '20px',
+                      background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                      borderRadius: '8px',
+                      border: '2px solid #dc2626',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ fontSize: '2rem', marginBottom: '10px' }}>👁️</div>
+                      <h3 style={{ color: '#7f1d1d', marginBottom: '10px' }}>Observer Mode</h3>
+                      <p style={{ color: '#991b1b', margin: 0 }}>
+                        You are observing this game as administrator.<br />
+                        You cannot select a country or play.
+                      </p>
+                    </div>
+                  ) : !playerCountry ? (
                     <div>
                       <h3>Select Your Country</h3>
                       <div className="country-grid">
@@ -902,19 +919,9 @@
                         <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>
                           You are playing as: {countries[playerCountry]?.name || playerCountry}
                         </p>
-                        <button
-                          onClick={handleLeaveGame}
-                          style={{
-                            padding: '8px 16px',
-                            background: '#64748b',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Leave Game
-                        </button>
+                        <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                          You are committed to this country for the game.
+                        </p>
                       </div>
 
                       <button

@@ -312,6 +312,13 @@ io.on('connection', (socket) => {
       return;
     }
     
+    // Prevent superadmin from joining as player
+    const user = Object.values(globalState.users).find(u => u.playerId === playerId);
+    if (user && user.role === 'superadmin') {
+      socket.emit('joinResult', { success: false, message: 'Administrator cannot join as a player. You are an observer.' });
+      return;
+    }
+    
     const taken = Object.values(room.players).some(p => p.country === country);
     
     if (taken) {
