@@ -207,6 +207,9 @@ io.on('connection', (socket) => {
   
   // Login existing user
   socket.on('login', ({ username, password }) => {
+    console.log('=== LOGIN REQUEST ===');
+    console.log('Username:', username);
+    
     if (!username || !password) {
       socket.emit('loginResult', { success: false, message: 'Username and password required' });
       return;
@@ -214,23 +217,31 @@ io.on('connection', (socket) => {
     
     const user = globalState.users[username];
     if (!user) {
+      console.log('ERROR: User not found');
       socket.emit('loginResult', { success: false, message: 'Invalid username or password' });
       return;
     }
     
+    console.log('User found, role:', user.role || 'undefined');
+    
     if (!verifyPassword(password, user.password)) {
+      console.log('ERROR: Password incorrect');
       socket.emit('loginResult', { success: false, message: 'Invalid username or password' });
       return;
     }
+    
+    const role = user.role || 'player';
+    console.log('Login successful, sending role:', role);
     
     socket.emit('loginResult', { 
       success: true, 
       playerId: user.playerId, 
       username: username,
-      role: user.role || 'player'
+      role: role
     });
     
-    console.log(`User logged in: ${username} (${user.role || 'player'})`);
+    console.log(`User logged in: ${username} (${role})`);
+    console.log('====================');
   });
   
   // Create new room
@@ -374,24 +385,42 @@ io.on('connection', (socket) => {
   
   // SUPERADMIN ONLY: Start game in room
   socket.on('startGame', ({ roomId, playerId }) => {
+    console.log('=== START GAME REQUEST ===');
+    console.log('Room ID:', roomId);
+    console.log('Player ID:', playerId);
+    
     const room = globalState.rooms[roomId];
     if (!room) {
+      console.log('ERROR: Room not found');
       socket.emit('startGameResult', { success: false, message: 'Room not found' });
       return;
     }
     
     // Check if user is superadmin
     const user = Object.values(globalState.users).find(u => u.playerId === playerId);
+    console.log('User found:', user ? 'YES' : 'NO');
+    if (user) {
+      console.log('User role:', user.role);
+    }
+    
     const isSuperAdmin = user && user.role === 'superadmin';
+    console.log('Is superadmin:', isSuperAdmin);
     
     if (!isSuperAdmin) {
-      socket.emit('startGameResult', { success: false, message: 'Only the administrator can start games' });
+      console.log('ERROR: Not superadmin');
+      socket.emit('startGameResult', { 
+        success: false, 
+        message: `Only the administrator can start games. Your role: ${user ? user.role : 'not found'}` 
+      });
       return;
     }
     
     // Check if enough players
     const playerCount = Object.keys(room.players).length;
+    console.log('Player count:', playerCount);
+    
     if (playerCount < 2) {
+      console.log('ERROR: Not enough players');
       socket.emit('startGameResult', { success: false, message: 'Need at least 2 players to start' });
       return;
     }
@@ -400,12 +429,14 @@ io.on('connection', (socket) => {
     room.gamePhase = 'voting';
     room.currentRound = 1;
     
+    console.log('SUCCESS: Game started!');
     socket.emit('startGameResult', { success: true });
     broadcastToRoom(roomId);
     broadcastRoomList();
     saveState();
     
     console.log(`Game started in room ${roomId} by superadmin`);
+    console.log('=========================');
   });
   
   // SUPERADMIN ONLY: Reset room
