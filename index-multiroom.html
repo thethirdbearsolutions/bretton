@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bretton Woods - Multi-Room Lobby</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .room-lobby {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .room-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 2px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .room-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+        }
+        
+        .room-card.full {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .room-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .room-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .room-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .room-status.waiting {
+            background: #fef3c7;
+            color: #d97706;
+        }
+        
+        .room-status.playing {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+        
+        .room-status.complete {
+            background: #e0e7ff;
+            color: #4f46e5;
+        }
+        
+        .room-info {
+            display: flex;
+            gap: 20px;
+            color: #64748b;
+            font-size: 0.875rem;
+            margin-bottom: 12px;
+        }
+        
+        .room-actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn-create-room {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-create-room:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #1e293b;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #475569;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+        
+        .breadcrumb button {
+            background: none;
+            border: none;
+            color: #3b82f6;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0;
+            font-size: 0.875rem;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #94a3b8;
+        }
+        
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="container">
+            <div class="card">
+                <p style="text-align: center; padding: 40px;">Connecting to server...</p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script type="text/babel">
+        let gameData = null;
+        fetch('/game-data.json')
+          .then(r => r.json())
+          .then(data => {
+            gameData = data;
+            initializeApp();
+          });
+
+        const socket = io();
+        const { useState, useEffect } = React;
+
+        const BrettonWoodsMultiRoom = () => {
+          // Authentication state
+          const [isAuthenticated, setIsAuthenticated] = useState(false);
+          const [username, setUsername] = useState('');
+          const [playerId, setPlayerId] = useState('');
+          const [showRegister, setShowRegister] = useState(false);
+          
+          // Room state
+          const [currentView, setCurrentView] = useState('roomLobby'); // 'roomLobby' or 'gameRoom'
+          const [roomList, setRoomList] = useState([]);
+          const [currentRoom, setCurrentRoom] = useState(null);
+          const [showCreateRoomModal, setShowCreateRoomModal] = useState(false);
+          
+          // Game state
+          const [playerCountry, setPlayerCountry] = useState(null);
+          const [gameState, setGameState] = useState(null);
+          const [isReady, setIsReady] = useState(false);
+          const [connected, setConnected] = useState(false);
+
+          // Check for existing session
+          useEffect(() => {
+            const savedUsername = sessionStorage.getItem('brettonWoodsUsername');
+            const savedPlayerId = sessionStorage.getItem('brettonWoodsPlayerId');
+            
+            if (savedUsername && savedPlayerId) {
+              setUsername(savedUsername);
+              setPlayerId(savedPlayerId);
+              setIsAuthenticated(true);
+            }
+          }, []);
+
+          // Socket connection
+          useEffect(() => {
+            socket.on('connect', () => {
+              setConnected(true);
+              console.log('Connected to server');
+            });
+
+            socket.on('disconnect', () => {
+              setConnected(false);
+              console.log('Disconnected from server');
+            });
+
+            socket.on('roomListUpdate', (list) => {
+              setRoomList(list);
+            });
+
+            socket.on('stateUpdate', (state) => {
+              setGameState(state);
+              
+              // Check if we're in this room
+              if (state.players[playerId]) {
+                setPlayerCountry(state.players[playerId].country);
+                setIsReady(state.readyPlayers.includes(playerId));
+              }
+            });
+
+            socket.on('roomCreated', ({ roomId, roomName }) => {
+              setCurrentRoom({ id: roomId, name: roomName });
+              setCurrentView('gameRoom');
+              socket.emit('joinRoom', { roomId });
+            });
+
+            socket.on('joinRoomResult', ({ success, roomId, message }) => {
+              if (success) {
+                console.log('Joined room:', roomId);
+              } else {
+                alert(message || 'Failed to join room');
+              }
+            });
+
+            socket.on('leftRoom', () => {
+              setCurrentView('roomLobby');
+              setCurrentRoom(null);
+              setPlayerCountry(null);
+              setIsReady(false);
+            });
+
+            socket.on('roomDeleted', () => {
+              alert('This room has been deleted by the host');
+              setCurrentView('roomLobby');
+              setCurrentRoom(null);
+              setPlayerCountry(null);
+              setIsReady(false);
+            });
+
+            return () => {
+              socket.off('connect');
+              socket.off('disconnect');
+              socket.off('roomListUpdate');
+              socket.off('stateUpdate');
+              socket.off('roomCreated');
+              socket.off('joinRoomResult');
+              socket.off('leftRoom');
+              socket.off('roomDeleted');
+            };
+          }, [playerId]);
+
+          // Authentication handlers
+          const handleRegister = (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const username = formData.get('username');
+            const password = formData.get('password');
+
+            socket.emit('register', { username, password });
+            
+            socket.once('registerResult', ({ success, playerId: newPlayerId, message }) => {
+              if (success) {
+                setUsername(username);
+                setPlayerId(newPlayerId);
+                setIsAuthenticated(true);
+                sessionStorage.setItem('brettonWoodsUsername', username);
+                sessionStorage.setItem('brettonWoodsPlayerId', newPlayerId);
+              } else {
+                alert(message);
+              }
+            });
+          };
+
+          const handleLogin = (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const username = formData.get('username');
+            const password = formData.get('password');
+
+            socket.emit('login', { username, password });
+            
+            socket.once('loginResult', ({ success, playerId: returnedPlayerId, message }) => {
+              if (success) {
+                setUsername(username);
+                setPlayerId(returnedPlayerId);
+                setIsAuthenticated(true);
+                sessionStorage.setItem('brettonWoodsUsername', username);
+                sessionStorage.setItem('brettonWoodsPlayerId', returnedPlayerId);
+              } else {
+                alert(message || 'Login failed. If you recently registered but the server restarted, you may need to register again or click "Clear Saved Session" to start fresh.');
+              }
+            });
+          };
+
+          const handleClearSession = () => {
+            sessionStorage.clear();
+            localStorage.clear();
+            window.location.reload();
+          };
+
+          // Room handlers
+          const handleCreateRoom = (roomName) => {
+            socket.emit('createRoom', { playerId, roomName });
+            setShowCreateRoomModal(false);
+          };
+
+          const handleJoinRoom = (roomId, roomName) => {
+            setCurrentRoom({ id: roomId, name: roomName });
+            setCurrentView('gameRoom');
+            socket.emit('joinRoom', { roomId });
+          };
+
+          const handleLeaveRoom = () => {
+            if (currentRoom) {
+              socket.emit('leaveRoom', { roomId: currentRoom.id });
+              socket.emit('leaveGame', { roomId: currentRoom.id, playerId });
+            }
+          };
+
+          const handleDeleteRoom = () => {
+            if (currentRoom && window.confirm('Are you sure you want to delete this room?')) {
+              socket.emit('deleteRoom', { roomId: currentRoom.id, playerId });
+            }
+          };
+
+          // Game handlers
+          const handleJoinGame = (country) => {
+            if (currentRoom) {
+              socket.emit('joinGame', { roomId: currentRoom.id, playerId, country });
+            }
+          };
+
+          const handleLeaveGame = () => {
+            if (currentRoom) {
+              socket.emit('leaveGame', { roomId: currentRoom.id, playerId });
+              setPlayerCountry(null);
+              setIsReady(false);
+            }
+          };
+
+          const handleReady = () => {
+            if (currentRoom) {
+              socket.emit('setReady', { roomId: currentRoom.id, playerId, ready: !isReady });
+            }
+          };
+
+          // Get countries and issues from game data
+          const countries = gameData?.countries || {};
+          const issues = gameData?.issues || [];
+
+          // Login screen
+          if (!isAuthenticated) {
+            return (
+              <div className="container">
+                <div className="header">
+                  <h1>🌍 Bretton Woods 1944</h1>
+                  <p>Multi-Room Multiplayer Simulation</p>
+                </div>
+
+                <div className="card">
+                  <h2>{showRegister ? 'Create Account' : 'Login'}</h2>
+                  
+                  <form onSubmit={showRegister ? handleRegister : handleLogin}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                        Username
+                      </label>
+                      <input
+                        type="text"
+                        name="username"
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          border: '2px solid #e2e8f0',
+                          borderRadius: '6px',
+                          fontSize: '1rem'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                        Password
+                      </label>
+                      <input
+                        type="password"
+                        name="password"
+                        required
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          border: '2px solid #e2e8f0',
+                          borderRadius: '6px',
+                          fontSize: '1rem'
+                        }}
+                      />
+                    </div>
+
+                    <button type="submit" className="btn-primary" style={{ width: '100%' }}>
+                      {showRegister ? 'Register' : 'Login'}
+                    </button>
+                  </form>
+
+                  <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                    <button
+                      onClick={() => setShowRegister(!showRegister)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#3b82f6',
+                        cursor: 'pointer',
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      {showRegister ? 'Already have an account? Login' : "Don't have an account? Register"}
+                    </button>
+                  </div>
+
+                  <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                    <button
+                      onClick={handleClearSession}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#dc2626',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem'
+                      }}
+                    >
+                      🗑️ Clear Saved Session
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          // Room Lobby
+          if (currentView === 'roomLobby') {
+            return (
+              <div className="room-lobby">
+                <div className="header">
+                  <h1>🌍 Bretton Woods - Game Rooms</h1>
+                  <p>Welcome, {username}! 👤</p>
+                </div>
+
+                <div style={{ 
+                  position: 'fixed', 
+                  top: '10px', 
+                  right: '10px', 
+                  padding: '8px 16px',
+                  background: connected ? '#dcfce7' : '#fee2e2',
+                  color: connected ? '#166534' : '#991b1b',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  zIndex: 1000
+                }}>
+                  {connected ? '🟢 Connected' : '🔴 Disconnected'}
+                </div>
+
+                <div className="card">
+                  <h2 style={{ marginBottom: '20px' }}>Available Rooms</h2>
+                  
+                  {roomList.length === 0 ? (
+                    <div className="empty-state">
+                      <div className="empty-state-icon">🏠</div>
+                      <h3>No rooms available</h3>
+                      <p>Create a new room to get started!</p>
+                    </div>
+                  ) : (
+                    roomList.map((room) => (
+                      <div 
+                        key={room.id} 
+                        className={`room-card ${room.playerCount >= room.maxPlayers ? 'full' : ''}`}
+                        onClick={() => room.playerCount < room.maxPlayers && handleJoinRoom(room.id, room.name)}
+                      >
+                        <div className="room-header">
+                          <div className="room-name">{room.name}</div>
+                          <div className={`room-status ${room.status}`}>
+                            {room.status === 'waiting' && '⏸️ Waiting'}
+                            {room.status === 'playing' && '▶️ Playing'}
+                            {room.status === 'complete' && '✓ Complete'}
+                          </div>
+                        </div>
+                        
+                        <div className="room-info">
+                          <span>👥 {room.playerCount}/{room.maxPlayers} players</span>
+                          <span>🎮 Phase: {room.phase}</span>
+                          <span>⏰ {new Date(room.createdAt).toLocaleTimeString()}</span>
+                        </div>
+                        
+                        {room.playerCount >= room.maxPlayers && (
+                          <div style={{ color: '#dc2626', fontSize: '0.875rem', fontWeight: '600' }}>
+                            Room Full
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <button 
+                  className="btn-create-room"
+                  onClick={() => setShowCreateRoomModal(true)}
+                  style={{ marginTop: '20px' }}
+                >
+                  + Create New Room
+                </button>
+
+                {showCreateRoomModal && (
+                  <CreateRoomModal
+                    onClose={() => setShowCreateRoomModal(false)}
+                    onCreate={handleCreateRoom}
+                  />
+                )}
+              </div>
+            );
+          }
+
+          // Game Room
+          if (currentView === 'gameRoom' && currentRoom) {
+            const isHost = gameState?.hostId === playerId;
+            const playerList = gameState?.players ? Object.values(gameState.players) : [];
+            const availableCountries = Object.keys(countries).filter(
+              country => !playerList.some(p => p.country === country)
+            );
+
+            return (
+              <div className="container">
+                <div className="breadcrumb">
+                  <button onClick={handleLeaveRoom}>← Back to Lobby</button>
+                  <span>/</span>
+                  <span>{currentRoom.name}</span>
+                </div>
+
+                <div style={{ 
+                  position: 'fixed', 
+                  top: '10px', 
+                  right: '10px', 
+                  padding: '8px 16px',
+                  background: connected ? '#dcfce7' : '#fee2e2',
+                  color: connected ? '#166534' : '#991b1b',
+                  borderRadius: '6px',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  zIndex: 1000
+                }}>
+                  {connected ? '🟢 Connected' : '🔴 Disconnected'}
+                </div>
+
+                <div className="header">
+                  <h1>🏠 {currentRoom.name}</h1>
+                  <p style={{ marginTop: '8px', fontSize: '0.875rem', color: '#64748b' }}>
+                    {isHost && '👑 You are the host | '}
+                    Room ID: {currentRoom.id}
+                  </p>
+                </div>
+
+                <div className="card">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <h2>Game Lobby</h2>
+                    {isHost && (
+                      <button
+                        onClick={handleDeleteRoom}
+                        style={{
+                          padding: '8px 16px',
+                          background: '#dc2626',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Delete Room
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ marginBottom: '30px' }}>
+                    <h3>Players ({playerList.length}/7)</h3>
+                    <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+                      {playerList.map((player) => (
+                        <div key={player.id} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          padding: '12px',
+                          background: player.id === playerId ? '#eff6ff' : player.disconnected ? '#fef3c7' : '#f8fafc',
+                          borderRadius: '8px',
+                          borderLeft: '4px solid ' + (player.id === playerId ? '#3b82f6' : player.disconnected ? '#f59e0b' : '#cbd5e1'),
+                          opacity: player.disconnected ? 0.7 : 1
+                        }}>
+                          <div>
+                            <span style={{ fontWeight: 'bold' }}>
+                              {countries[player.country]?.name || player.country}
+                            </span>
+                            {player.id === playerId && <span style={{ marginLeft: '8px', fontSize: '0.875rem', color: '#3b82f6' }}>(You)</span>}
+                            {player.disconnected && <span style={{ marginLeft: '8px', fontSize: '0.75rem', color: '#d97706' }}>🔌 Disconnected</span>}
+                          </div>
+                          <div>
+                            {gameState?.readyPlayers?.includes(player.id) ? (
+                              <span style={{ color: '#16a34a', fontWeight: 'bold' }}>✓ Ready</span>
+                            ) : (
+                              <span style={{ color: '#64748b' }}>Not Ready</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {!playerCountry ? (
+                    <div>
+                      <h3>Select Your Country</h3>
+                      <div className="country-grid">
+                        {availableCountries.map(key => {
+                          const country = countries[key];
+                          if (!country) return null;
+                          return (
+                            <div 
+                              key={key} 
+                              className={`country-card ${country.color}`}
+                              onClick={() => handleJoinGame(key)}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <h3>{country.name}</h3>
+                              <p style={{ fontSize: '0.875rem', marginBottom: '12px', opacity: '0.9' }}>
+                                {country.economicPosition}
+                              </p>
+                              <p style={{ fontSize: '0.75rem', opacity: '0.8' }}>
+                                {country.role}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{
+                        padding: '16px',
+                        background: '#eff6ff',
+                        borderRadius: '8px',
+                        marginBottom: '20px'
+                      }}>
+                        <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+                          You are playing as: {countries[playerCountry]?.name || playerCountry}
+                        </p>
+                        <button
+                          onClick={handleLeaveGame}
+                          style={{
+                            padding: '8px 16px',
+                            background: '#64748b',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Leave Game
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={handleReady}
+                        className="btn-primary"
+                        style={{ width: '100%' }}
+                      >
+                        {isReady ? '✓ Ready (Click to Unready)' : 'Mark as Ready'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          return null;
+        };
+
+        // Create Room Modal Component
+        const CreateRoomModal = ({ onClose, onCreate }) => {
+          const [roomName, setRoomName] = useState('');
+
+          const handleSubmit = (e) => {
+            e.preventDefault();
+            if (roomName.trim()) {
+              onCreate(roomName.trim());
+            }
+          };
+
+          return (
+            <div className="modal-overlay" onClick={onClose}>
+              <div className="modal" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-header">Create New Room</div>
+                
+                <form onSubmit={handleSubmit}>
+                  <div className="form-group">
+                    <label className="form-label">Room Name</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={roomName}
+                      onChange={(e) => setRoomName(e.target.value)}
+                      placeholder="e.g., Period 3 History Class"
+                      required
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="modal-actions">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      style={{
+                        padding: '10px 20px',
+                        background: '#e2e8f0',
+                        color: '#475569',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn-primary"
+                    >
+                      Create Room
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          );
+        };
+
+        // Initialize app when game data is loaded
+        function initializeApp() {
+          if (gameData) {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(<BrettonWoodsMultiRoom />);
+          }
+        }
+    </script>
+</body>
+</html>
