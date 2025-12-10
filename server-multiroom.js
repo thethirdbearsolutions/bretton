@@ -183,20 +183,26 @@ io.on('connection', (socket) => {
     }
     
     const playerId = `player_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Only jjucovy@gmail.com is the super admin
+    const isSuperAdmin = username.toLowerCase() === 'jjucovy@gmail.com' || username.toLowerCase() === 'jjucovy';
+    
     globalState.users[username] = {
       password: hashPassword(password),
       playerId: playerId,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      role: isSuperAdmin ? 'superadmin' : 'player'
     };
     
     socket.emit('registerResult', { 
       success: true, 
       playerId: playerId,
-      username: username
+      username: username,
+      role: isSuperAdmin ? 'superadmin' : 'player'
     });
     
     saveState();
-    console.log(`User registered: ${username}`);
+    console.log(`User registered: ${username} (${isSuperAdmin ? 'SUPER ADMIN' : 'player'})`);
   });
   
   // Login existing user
@@ -220,10 +226,11 @@ io.on('connection', (socket) => {
     socket.emit('loginResult', { 
       success: true, 
       playerId: user.playerId, 
-      username: username
+      username: username,
+      role: user.role || 'player'
     });
     
-    console.log(`User logged in: ${username}`);
+    console.log(`User logged in: ${username} (${user.role || 'player'})`);
   });
   
   // Create new room
@@ -357,6 +364,139 @@ io.on('connection', (socket) => {
     broadcastToRoom(roomId);
     saveState();
   });
+  
+  // SUPERADMIN ONLY: Start game in room
+  socket.on('startGame', ({ roomId, playerId }) => {
+    const room = globalState.rooms[roomId];
+    if (!room) {
+      socket.emit('startGameResult', { success: false, message: 'Room not found' });
+      return;
+    }
+    
+    // Check if user is superadmin
+    const user = Object.values(globalState.users).find(u => u.playerId === playerId);
+    const isSuperAdmin = user && user.role === 'superadmin';
+    
+    if (!isSuperAdmin) {
+      socket.emit('startGameResult', { success: false, message: 'Only the administrator can start games' });
+      return;
+    }
+    
+    // Check if enough players
+    const playerCount = Object.keys(room.players).length;
+    if (playerCount < 2) {
+      socket.emit('startGameResult', { success: false, message: 'Need at least 2 players to start' });
+      return;
+    }
+    
+    room.gameStarted = true;
+    room.gamePhase = 'voting';
+    room.currentRound = 1;
+    
+    broadcastToRoom(roomId);
+    broadcastRoomList();
+    saveState();
+    
+    console.log(`Game started in room ${roomId} by superadmin`);
+  });
+  
+  // SUPERADMIN ONLY: Reset room
+  socket.on('resetRoom', ({ roomId, playerId }) => {
+    const room = globalState.rooms[roomId];
+    if (!room) return;
+    
+    const user = Object.values(globalState.users).find(u => u.playerId === playerId);
+    const isSuperAdmin = user && user.role === 'superadmin';
+    
+    if (!isSuperAdmin) {
+      socket.emit('resetRoomResult', { success: false, message: 'Only the administrator can reset games' });
+      return;
+    }
+    
+    // Reset game state but keep players
+    room.gameStarted = false;
+    room.currentRound = 0;
+    room.gamePhase = 'lobby';
+    room.votes = {};
+    room.scores = { USA: 0, UK: 0, USSR: 0, France: 0, China: 0, India: 0, Argentina: 0 };
+    room.roundHistory = [];
+    room.readyPlayers = [];
+    room.phase2 = {
+      active: false,
+      currentYear: 1946,
+      yearlyData: {},
+      achievements: {}
+    };
+    
+    broadcastToRoom(roomId);
+    broadcastRoomList();
+    saveState();
+    
+    console.log(`Room ${roomId} reset by superadmin`);
+  });
+  
+  // SUPERADMIN ONLY: Clear all data
+  socket.on('clearAllData', ({ playerId, confirmCode }) => {
+    const user = Object.values(globalState.users).find(u => u.playerId === playerId);
+    
+    if (!user || user.role !== 'superadmin') {
+      socket.emit('clearDataResult', { success: false, message: 'Super admin access required' });
+      return;
+    }
+    
+    if (confirmCode !== 'CLEAR_ALL_DATA') {
+      socket.emit('clearDataResult', { success: false, message: 'Invalid confirmation code' });
+      return;
+    }
+    
+    // Clear all rooms but keep superadmin user
+    globalState.rooms = {};
+    globalState.roomList = [];
+    
+    // Keep only superadmin user
+    const superAdminUser = {};
+    Object.entries(globalState.users).forEach(([username, userData]) => {
+      if (userData.role === 'superadmin') {
+        superAdminUser[username] = userData;
+      }
+    });
+    globalState.users = superAdminUser;
+    
+    broadcastRoomList();
+    saveState();
+    
+    socket.emit('clearDataResult', { success: true, message: 'All data cleared except administrator account' });
+    console.log(`All data cleared by superadmin: ${user.playerId}`);
+  });
+  
+  // SUPERADMIN ONLY: Delete any room
+  socket.on('adminDeleteRoom', ({ roomId, playerId }) => {
+    const user = Object.values(globalState.users).find(u => u.playerId === playerId);
+    
+    if (!user || user.role !== 'superadmin') {
+      socket.emit('deleteRoomResult', { success: false, message: 'Administrator access required' });
+      return;
+    }
+    
+    if (!globalState.rooms[roomId]) {
+      socket.emit('deleteRoomResult', { success: false, message: 'Room not found' });
+      return;
+    }
+    
+    // Notify all players in room
+    io.to(roomId).emit('roomDeleted', { roomId });
+    
+    // Delete room
+    delete globalState.rooms[roomId];
+    
+    socket.emit('deleteRoomResult', { success: true });
+    broadcastRoomList();
+    saveState();
+    
+    console.log(`Room ${roomId} deleted by superadmin`);
+  });
+  
+  // Remove promote function - no one can be promoted
   
   // Disconnect
   socket.on('disconnect', () => {
