@@ -1561,9 +1561,9 @@
                     </div>
                   ) : (
                     <div>
-                    <div style={{ marginBottom: '30px' }}>
-                    <h3>Players ({playerList.length}/7)</h3>
-                    <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+                      <div style={{ marginBottom: '30px' }}>
+                        <h3>Players ({playerList.length}/7)</h3>
+                        <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
                       {playerList.map((player) => (
                         <div key={player.id} style={{
                           display: 'flex',
@@ -1591,6 +1591,7 @@
                         </div>
                       ))}
                     </div>
+                  </div>
                   </div>
 
                   {userRole === 'superadmin' ? (
