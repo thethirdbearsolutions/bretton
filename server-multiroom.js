@@ -446,15 +446,24 @@ io.on('connection', (socket) => {
   
   // SUPERADMIN ONLY: Clear all data
   socket.on('clearAllData', ({ playerId, confirmCode }) => {
-    const user = Object.values(globalState.users).find(u => u.playerId === playerId);
+    console.log('clearAllData called:', { playerId, confirmCode });
     
-    if (!user || user.role !== 'superadmin') {
-      socket.emit('clearDataResult', { success: false, message: 'Super admin access required' });
+    const user = Object.values(globalState.users).find(u => u.playerId === playerId);
+    console.log('User found:', user ? `${user.role}` : 'not found');
+    console.log('All users:', Object.keys(globalState.users));
+    
+    if (!user) {
+      socket.emit('clearDataResult', { success: false, message: 'User not found. Please try logging out and back in.' });
+      return;
+    }
+    
+    if (user.role !== 'superadmin') {
+      socket.emit('clearDataResult', { success: false, message: `Access denied. Your role is: ${user.role}. Only superadmin can clear data.` });
       return;
     }
     
     if (confirmCode !== 'CLEAR_ALL_DATA') {
-      socket.emit('clearDataResult', { success: false, message: 'Invalid confirmation code' });
+      socket.emit('clearDataResult', { success: false, message: 'Invalid confirmation code. Type exactly: CLEAR_ALL_DATA' });
       return;
     }
     
