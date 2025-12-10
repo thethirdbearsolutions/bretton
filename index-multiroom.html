@@ -600,20 +600,30 @@
                     </button>
                   </div>
 
-                  <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                    <button
-                      onClick={handleClearSession}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#dc2626',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem'
-                      }}
-                    >
-                      🗑️ Clear Saved Session
-                    </button>
-                  </div>
+                  {(sessionStorage.getItem('brettonWoodsUsername') || 
+                    sessionStorage.getItem('brettonWoodsPlayerId')) && (
+                    <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                      <button
+                        onClick={handleClearSession}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#dc2626',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        🗑️ Clear Saved Session
+                      </button>
+                      <p style={{ 
+                        fontSize: '0.75rem', 
+                        color: '#64748b', 
+                        marginTop: '8px' 
+                      }}>
+                        Use this if you're having login issues
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             );
