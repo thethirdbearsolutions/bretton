@@ -902,6 +902,24 @@
 
                   {gameState?.gameStarted ? (
                     <div>
+                      {/* DEBUG INFO */}
+                      <div style={{
+                        padding: '10px',
+                        background: '#f0f9ff',
+                        borderRadius: '6px',
+                        marginBottom: '20px',
+                        fontSize: '0.75rem',
+                        color: '#0369a1',
+                        fontFamily: 'monospace'
+                      }}>
+                        <strong>Debug Info:</strong> gameStarted={String(gameState.gameStarted)}, 
+                        gamePhase={gameState.gamePhase}, 
+                        currentRound={gameState.currentRound},
+                        userRole={userRole},
+                        playerCountry={playerCountry || 'none'},
+                        currentIssue={currentIssue ? 'exists' : 'null'}
+                      </div>
+
                       {/* VOTING PHASE */}
                       {gameState.gamePhase === 'voting' && (
                         <div>
@@ -1465,6 +1483,27 @@
                               </button>
                             </div>
                           )}
+                        </div>
+                      )}
+
+                      {/* UNKNOWN PHASE - Debug Fallback */}
+                      {gameState.gamePhase !== 'voting' && 
+                       gameState.gamePhase !== 'results' && 
+                       gameState.gamePhase !== 'complete' && (
+                        <div style={{
+                          padding: '40px',
+                          background: '#fee2e2',
+                          borderRadius: '8px',
+                          border: '2px solid #dc2626',
+                          textAlign: 'center'
+                        }}>
+                          <h3 style={{ color: '#991b1b' }}>Unknown Game Phase</h3>
+                          <p style={{ color: '#7f1d1d' }}>
+                            Game phase: <strong>{gameState.gamePhase}</strong>
+                          </p>
+                          <p style={{ color: '#7f1d1d', fontSize: '0.875rem', marginTop: '15px' }}>
+                            This shouldn't happen. Check browser console for errors.
+                          </p>
                         </div>
                       )}
                     </div>
