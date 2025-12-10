@@ -443,6 +443,11 @@
             socket.emit('login', { username, password });
             
             socket.once('loginResult', ({ success, playerId: returnedPlayerId, role, message }) => {
+              console.log('=== LOGIN RESULT ===');
+              console.log('Success:', success);
+              console.log('Role received:', role);
+              console.log('Player ID:', returnedPlayerId);
+              
               if (success) {
                 setUsername(username);
                 setPlayerId(returnedPlayerId);
@@ -451,7 +456,15 @@
                 sessionStorage.setItem('brettonWoodsUsername', username);
                 sessionStorage.setItem('brettonWoodsPlayerId', returnedPlayerId);
                 sessionStorage.setItem('brettonWoodsUserRole', role || 'player');
+                
+                console.log('Stored in session:', {
+                  username: sessionStorage.getItem('brettonWoodsUsername'),
+                  playerId: sessionStorage.getItem('brettonWoodsPlayerId'),
+                  role: sessionStorage.getItem('brettonWoodsUserRole')
+                });
+                console.log('===================');
               } else {
+                console.log('Login failed:', message);
                 alert(message || 'Login failed. If you recently registered but the server restarted, you may need to register again or click "Clear Saved Session" to start fresh.');
               }
             });
