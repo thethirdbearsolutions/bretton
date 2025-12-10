@@ -368,6 +368,28 @@
               setPlayerCountry(null);
               setIsReady(false);
             });
+            
+            socket.on('startGameResult', ({ success, message }) => {
+              if (!success) {
+                alert(message || 'Failed to start game');
+              } else {
+                console.log('Game started successfully');
+              }
+            });
+            
+            socket.on('resetRoomResult', ({ success, message }) => {
+              if (!success) {
+                alert(message || 'Failed to reset room');
+              } else {
+                console.log('Room reset successfully');
+              }
+            });
+            
+            socket.on('joinResult', ({ success, message }) => {
+              if (!success) {
+                alert(message || 'Failed to join game');
+              }
+            });
 
             return () => {
               socket.off('connect');
@@ -378,6 +400,9 @@
               socket.off('joinRoomResult');
               socket.off('leftRoom');
               socket.off('roomDeleted');
+              socket.off('startGameResult');
+              socket.off('resetRoomResult');
+              socket.off('joinResult');
             };
           }, [playerId]);
 
@@ -465,6 +490,11 @@
 
           // Game handlers
           const handleJoinGame = (country) => {
+            if (userRole === 'superadmin') {
+              alert('As administrator, you are an observer and cannot select a country.');
+              return;
+            }
+            
             if (currentRoom) {
               socket.emit('joinGame', { roomId: currentRoom.id, playerId, country });
             }
