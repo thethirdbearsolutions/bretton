@@ -331,6 +331,12 @@
             });
 
             socket.on('stateUpdate', (state) => {
+              console.log('=== STATE UPDATE ===');
+              console.log('Game started:', state.gameStarted);
+              console.log('Game phase:', state.gamePhase);
+              console.log('Current round:', state.currentRound);
+              console.log('Players:', Object.keys(state.players).length);
+              
               setGameState(state);
               
               // Check if we're in this room
@@ -338,6 +344,8 @@
                 setPlayerCountry(state.players[playerId].country);
                 setIsReady(state.readyPlayers.includes(playerId));
               }
+              
+              console.log('State updated in React');
             });
 
             socket.on('roomCreated', ({ roomId, roomName }) => {
@@ -530,6 +538,7 @@
           // Get countries and issues from game data
           const countries = gameData?.countries || {};
           const issues = gameData?.issues || [];
+          const currentIssue = gameState?.currentRound ? issues[gameState.currentRound - 1] : null;
 
           // Login screen
           if (!isAuthenticated) {
@@ -840,12 +849,15 @@
 
                 <div className="card">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
-                    <h2>Game Lobby</h2>
+                    <h2>{gameState?.gameStarted ? 'Game In Progress' : 'Game Lobby'}</h2>
                     {userRole === 'superadmin' && (
                       <div style={{ display: 'flex', gap: '10px' }}>
                         {!gameState?.gameStarted && (
                           <button
-                            onClick={() => socket.emit('startGame', { roomId: currentRoom.id, playerId })}
+                            onClick={() => {
+                              console.log('Start game button clicked');
+                              socket.emit('startGame', { roomId: currentRoom.id, playerId });
+                            }}
                             className="btn-primary"
                             style={{ padding: '8px 16px' }}
                           >
@@ -888,7 +900,576 @@
                     )}
                   </div>
 
-                  <div style={{ marginBottom: '30px' }}>
+                  {gameState?.gameStarted ? (
+                    <div>
+                      {/* VOTING PHASE */}
+                      {gameState.gamePhase === 'voting' && (
+                        <div>
+                          {/* Round Header */}
+                          <div style={{
+                            padding: '20px',
+                            background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+                            borderRadius: '8px',
+                            marginBottom: '20px',
+                            border: '2px solid #3b82f6'
+                          }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div>
+                                <h2 style={{ color: '#1e40af', margin: 0, fontSize: '1.5rem' }}>
+                                  Round {gameState.currentRound} of 10
+                                </h2>
+                                <p style={{ color: '#3b82f6', margin: '5px 0 0 0', fontSize: '0.875rem' }}>
+                                  Phase 1: Conference Voting
+                                </p>
+                              </div>
+                              <div style={{ textAlign: 'right' }}>
+                                <div style={{ fontSize: '0.875rem', color: '#64748b' }}>Your Score</div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#16a34a' }}>
+                                  {gameState.scores?.[playerCountry] || 0} pts
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Observer View */}
+                          {userRole === 'superadmin' ? (
+                            <div>
+                              <div style={{
+                                padding: '30px',
+                                background: '#fef3c7',
+                                borderRadius: '8px',
+                                border: '2px solid #f59e0b',
+                                marginBottom: '20px'
+                              }}>
+                                <h3 style={{ color: '#92400e', marginTop: 0 }}>👁️ Observer Mode</h3>
+                                <p style={{ color: '#78350f' }}>
+                                  You are monitoring the game. Players are voting on issues.
+                                </p>
+                              </div>
+
+                              {/* Show current issue */}
+                              {currentIssue && (
+                                <div className="card" style={{ marginBottom: '20px' }}>
+                                  <h3 style={{ marginTop: 0, color: '#1e293b' }}>{currentIssue.title}</h3>
+                                  <p style={{ color: '#64748b', fontSize: '0.95rem' }}>
+                                    {currentIssue.description}
+                                  </p>
+                                  
+                                  <div style={{ marginTop: '20px' }}>
+                                    <h4 style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '10px' }}>
+                                      Voting Progress:
+                                    </h4>
+                                    <div style={{ 
+                                      display: 'grid', 
+                                      gap: '8px'
+                                    }}>
+                                      {playerList.map((player) => (
+                                        <div key={player.id} style={{
+                                          padding: '10px',
+                                          background: gameState.votes?.[player.id] ? '#dcfce7' : '#f8fafc',
+                                          borderRadius: '6px',
+                                          borderLeft: '4px solid ' + (gameState.votes?.[player.id] ? '#16a34a' : '#cbd5e1')
+                                        }}>
+                                          <span style={{ fontWeight: 'bold' }}>
+                                            {countries[player.country]?.name || player.country}
+                                          </span>
+                                          <span style={{ 
+                                            marginLeft: '10px', 
+                                            color: gameState.votes?.[player.id] ? '#16a34a' : '#64748b',
+                                            fontSize: '0.875rem'
+                                          }}>
+                                            {gameState.votes?.[player.id] ? '✓ Voted' : '⏳ Waiting...'}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div>
+                              {/* Player Voting Interface */}
+                              {currentIssue && (
+                                <div>
+                                  {/* Issue Card */}
+                                  <div className="card" style={{ 
+                                    marginBottom: '20px',
+                                    background: 'white',
+                                    border: '2px solid #e2e8f0'
+                                  }}>
+                                    <div style={{
+                                      padding: '15px',
+                                      background: '#f8fafc',
+                                      borderRadius: '6px',
+                                      marginBottom: '15px'
+                                    }}>
+                                      <h3 style={{ 
+                                        margin: 0, 
+                                        color: '#1e293b',
+                                        fontSize: '1.25rem' 
+                                      }}>
+                                        {currentIssue.title}
+                                      </h3>
+                                    </div>
+                                    
+                                    <p style={{ 
+                                      fontSize: '0.95rem', 
+                                      lineHeight: '1.6',
+                                      color: '#475569',
+                                      marginBottom: '20px'
+                                    }}>
+                                      {currentIssue.description}
+                                    </p>
+
+                                    {/* Country-specific interests */}
+                                    {currentIssue.positions && currentIssue.positions[playerCountry] && (
+                                      <div style={{
+                                        padding: '15px',
+                                        background: '#eff6ff',
+                                        borderRadius: '6px',
+                                        borderLeft: '4px solid #3b82f6',
+                                        marginBottom: '20px'
+                                      }}>
+                                        <h4 style={{ 
+                                          margin: '0 0 10px 0',
+                                          fontSize: '0.9rem',
+                                          color: '#1e40af'
+                                        }}>
+                                          Your Country's Position:
+                                        </h4>
+                                        <p style={{ 
+                                          margin: 0,
+                                          fontSize: '0.875rem',
+                                          color: '#1e3a8a'
+                                        }}>
+                                          {currentIssue.positions[playerCountry]}
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {/* Options */}
+                                    <div style={{ marginBottom: '15px' }}>
+                                      <h4 style={{ 
+                                        fontSize: '0.9rem',
+                                        color: '#64748b',
+                                        marginBottom: '10px'
+                                      }}>
+                                        Options:
+                                      </h4>
+                                      <div style={{ display: 'grid', gap: '8px' }}>
+                                        {currentIssue.options && currentIssue.options.map((option, idx) => (
+                                          <div key={idx} style={{
+                                            padding: '10px',
+                                            background: '#f8fafc',
+                                            borderRadius: '6px',
+                                            fontSize: '0.875rem',
+                                            color: '#475569'
+                                          }}>
+                                            <strong style={{ color: '#1e293b' }}>
+                                              {option.label}:
+                                            </strong> {option.description}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Voting Buttons */}
+                                  {!gameState.votes?.[playerId] ? (
+                                    <div style={{
+                                      display: 'grid',
+                                      gridTemplateColumns: 'repeat(3, 1fr)',
+                                      gap: '12px',
+                                      marginBottom: '20px'
+                                    }}>
+                                      <button
+                                        onClick={() => {
+                                          socket.emit('vote', {
+                                            roomId: currentRoom.id,
+                                            playerId,
+                                            choice: 'for'
+                                          });
+                                        }}
+                                        style={{
+                                          padding: '20px',
+                                          background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)',
+                                          border: '2px solid #16a34a',
+                                          borderRadius: '8px',
+                                          cursor: 'pointer',
+                                          fontSize: '1rem',
+                                          fontWeight: 'bold',
+                                          color: '#166534',
+                                          transition: 'transform 0.2s'
+                                        }}
+                                        onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
+                                        onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                                      >
+                                        <div style={{ fontSize: '2rem', marginBottom: '8px' }}>✓</div>
+                                        <div>Support</div>
+                                      </button>
+                                      
+                                      <button
+                                        onClick={() => {
+                                          socket.emit('vote', {
+                                            roomId: currentRoom.id,
+                                            playerId,
+                                            choice: 'against'
+                                          });
+                                        }}
+                                        style={{
+                                          padding: '20px',
+                                          background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                                          border: '2px solid #dc2626',
+                                          borderRadius: '8px',
+                                          cursor: 'pointer',
+                                          fontSize: '1rem',
+                                          fontWeight: 'bold',
+                                          color: '#991b1b',
+                                          transition: 'transform 0.2s'
+                                        }}
+                                        onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
+                                        onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                                      >
+                                        <div style={{ fontSize: '2rem', marginBottom: '8px' }}>✗</div>
+                                        <div>Oppose</div>
+                                      </button>
+                                      
+                                      <button
+                                        onClick={() => {
+                                          socket.emit('vote', {
+                                            roomId: currentRoom.id,
+                                            playerId,
+                                            choice: 'abstain'
+                                          });
+                                        }}
+                                        style={{
+                                          padding: '20px',
+                                          background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+                                          border: '2px solid #64748b',
+                                          borderRadius: '8px',
+                                          cursor: 'pointer',
+                                          fontSize: '1rem',
+                                          fontWeight: 'bold',
+                                          color: '#475569',
+                                          transition: 'transform 0.2s'
+                                        }}
+                                        onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
+                                        onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                                      >
+                                        <div style={{ fontSize: '2rem', marginBottom: '8px' }}>○</div>
+                                        <div>Abstain</div>
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div style={{
+                                      padding: '30px',
+                                      background: '#dcfce7',
+                                      borderRadius: '8px',
+                                      border: '2px solid #16a34a',
+                                      textAlign: 'center',
+                                      marginBottom: '20px'
+                                    }}>
+                                      <div style={{ fontSize: '3rem', marginBottom: '10px' }}>✓</div>
+                                      <h3 style={{ color: '#166534', margin: '0 0 10px 0' }}>
+                                        Vote Submitted
+                                      </h3>
+                                      <p style={{ color: '#14532d', margin: 0 }}>
+                                        Your vote: <strong style={{ textTransform: 'capitalize' }}>
+                                          {gameState.votes[playerId]}
+                                        </strong>
+                                      </p>
+                                      <p style={{ color: '#166534', marginTop: '15px', fontSize: '0.875rem' }}>
+                                        Waiting for other players to vote...
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* RESULTS PHASE */}
+                      {gameState.gamePhase === 'results' && (
+                        <div>
+                          <div style={{
+                            padding: '30px',
+                            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                            borderRadius: '8px',
+                            border: '2px solid #f59e0b',
+                            marginBottom: '20px',
+                            textAlign: 'center'
+                          }}>
+                            <h2 style={{ color: '#92400e', marginTop: 0 }}>
+                              Round {gameState.currentRound} Results
+                            </h2>
+                            
+                            {/* Vote Outcome */}
+                            <div style={{
+                              padding: '20px',
+                              background: gameState.roundOutcome === 'passed' ? '#dcfce7' : '#fee2e2',
+                              borderRadius: '8px',
+                              marginBottom: '20px'
+                            }}>
+                              <div style={{ fontSize: '3rem', marginBottom: '10px' }}>
+                                {gameState.roundOutcome === 'passed' ? '✓' : '✗'}
+                              </div>
+                              <h3 style={{ 
+                                color: gameState.roundOutcome === 'passed' ? '#166534' : '#991b1b',
+                                margin: 0
+                              }}>
+                                Measure {gameState.roundOutcome === 'passed' ? 'PASSED' : 'FAILED'}
+                              </h3>
+                            </div>
+
+                            {/* Vote Tally */}
+                            <div style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(3, 1fr)',
+                              gap: '15px',
+                              marginBottom: '20px'
+                            }}>
+                              <div style={{
+                                padding: '15px',
+                                background: 'white',
+                                borderRadius: '8px'
+                              }}>
+                                <div style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '5px' }}>
+                                  Support
+                                </div>
+                                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#16a34a' }}>
+                                  {gameState.voteTally?.for || 0}
+                                </div>
+                              </div>
+                              <div style={{
+                                padding: '15px',
+                                background: 'white',
+                                borderRadius: '8px'
+                              }}>
+                                <div style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '5px' }}>
+                                  Oppose
+                                </div>
+                                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#dc2626' }}>
+                                  {gameState.voteTally?.against || 0}
+                                </div>
+                              </div>
+                              <div style={{
+                                padding: '15px',
+                                background: 'white',
+                                borderRadius: '8px'
+                              }}>
+                                <div style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '5px' }}>
+                                  Abstain
+                                </div>
+                                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#64748b' }}>
+                                  {gameState.voteTally?.abstain || 0}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Your score this round */}
+                            {userRole !== 'superadmin' && (
+                              <div style={{
+                                padding: '20px',
+                                background: 'white',
+                                borderRadius: '8px',
+                                marginBottom: '20px'
+                              }}>
+                                <div style={{ fontSize: '0.875rem', color: '#64748b', marginBottom: '5px' }}>
+                                  Your Score This Round
+                                </div>
+                                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#3b82f6' }}>
+                                  +{gameState.roundScores?.[playerCountry] || 0} pts
+                                </div>
+                                <div style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '5px' }}>
+                                  Total: {gameState.scores?.[playerCountry] || 0} pts
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Continue button - only admin can advance */}
+                            {userRole === 'superadmin' && (
+                              <button
+                                onClick={() => {
+                                  socket.emit('advanceRound', {
+                                    roomId: currentRoom.id,
+                                    playerId
+                                  });
+                                }}
+                                style={{
+                                  padding: '15px 40px',
+                                  background: '#3b82f6',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  fontSize: '1.1rem',
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                Continue to Next Round →
+                              </button>
+                            )}
+
+                            {userRole !== 'superadmin' && (
+                              <p style={{ color: '#78350f', fontSize: '0.875rem', fontStyle: 'italic' }}>
+                                Waiting for administrator to advance to next round...
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Leaderboard */}
+                          <div className="card">
+                            <h3 style={{ marginTop: 0 }}>Current Standings</h3>
+                            <div style={{ display: 'grid', gap: '10px' }}>
+                              {Object.entries(gameState.scores || {})
+                                .sort(([,a], [,b]) => b - a)
+                                .map(([country, score], idx) => (
+                                  <div key={country} style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '12px',
+                                    background: country === playerCountry ? '#eff6ff' : '#f8fafc',
+                                    borderRadius: '6px',
+                                    borderLeft: '4px solid ' + (idx === 0 ? '#f59e0b' : '#cbd5e1')
+                                  }}>
+                                    <div>
+                                      <span style={{ fontWeight: 'bold', marginRight: '10px' }}>
+                                        {idx + 1}.
+                                      </span>
+                                      <span style={{ fontWeight: 'bold' }}>
+                                        {countries[country]?.name || country}
+                                      </span>
+                                      {country === playerCountry && (
+                                        <span style={{ marginLeft: '8px', fontSize: '0.875rem', color: '#3b82f6' }}>
+                                          (You)
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div style={{ fontWeight: 'bold', fontSize: '1.1rem' }}>
+                                      {score} pts
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* GAME COMPLETE */}
+                      {gameState.gamePhase === 'complete' && (
+                        <div>
+                          <div style={{
+                            padding: '40px',
+                            background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+                            borderRadius: '8px',
+                            border: '3px solid #f59e0b',
+                            textAlign: 'center',
+                            marginBottom: '20px'
+                          }}>
+                            <div style={{ fontSize: '4rem', marginBottom: '20px' }}>🏆</div>
+                            <h1 style={{ color: '#92400e', marginTop: 0, marginBottom: '10px' }}>
+                              Game Complete!
+                            </h1>
+                            <p style={{ color: '#78350f', fontSize: '1.1rem' }}>
+                              Bretton Woods Conference Concluded
+                            </p>
+                          </div>
+
+                          {/* Final Standings */}
+                          <div className="card">
+                            <h2 style={{ marginTop: 0, marginBottom: '20px' }}>Final Standings</h2>
+                            <div style={{ display: 'grid', gap: '12px' }}>
+                              {Object.entries(gameState.scores || {})
+                                .sort(([,a], [,b]) => b - a)
+                                .map(([country, score], idx) => (
+                                  <div key={country} style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '15px',
+                                    background: idx === 0 
+                                      ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)'
+                                      : country === playerCountry ? '#eff6ff' : '#f8fafc',
+                                    borderRadius: '8px',
+                                    border: idx === 0 ? '2px solid #f59e0b' : 'none',
+                                    borderLeft: idx === 0 ? '4px solid #f59e0b' : '4px solid #cbd5e1'
+                                  }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                      <div style={{ 
+                                        fontSize: '1.5rem', 
+                                        fontWeight: 'bold',
+                                        color: idx === 0 ? '#92400e' : '#64748b',
+                                        minWidth: '40px'
+                                      }}>
+                                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`}
+                                      </div>
+                                      <div>
+                                        <div style={{ 
+                                          fontWeight: 'bold',
+                                          fontSize: '1.1rem',
+                                          color: idx === 0 ? '#92400e' : '#1e293b'
+                                        }}>
+                                          {countries[country]?.name || country}
+                                        </div>
+                                        {country === playerCountry && (
+                                          <div style={{ 
+                                            fontSize: '0.875rem', 
+                                            color: '#3b82f6',
+                                            marginTop: '2px'
+                                          }}>
+                                            (You)
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div style={{ 
+                                      fontWeight: 'bold', 
+                                      fontSize: '1.5rem',
+                                      color: idx === 0 ? '#92400e' : '#1e293b'
+                                    }}>
+                                      {score} pts
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+
+                          {/* Admin can reset */}
+                          {userRole === 'superadmin' && (
+                            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+                              <button
+                                onClick={() => {
+                                  if (window.confirm('Reset this game? All progress will be lost.')) {
+                                    socket.emit('resetRoom', {
+                                      roomId: currentRoom.id,
+                                      playerId
+                                    });
+                                  }
+                                }}
+                                style={{
+                                  padding: '15px 30px',
+                                  background: '#f59e0b',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  fontSize: '1rem',
+                                  fontWeight: 'bold',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                🔄 Start New Game
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ marginBottom: '30px' }}>
                     <h3>Players ({playerList.length}/7)</h3>
                     <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
                       {playerList.map((player) => (
@@ -987,6 +1568,7 @@
                     </div>
                   )}
                 </div>
+                )}
               </div>
             );
           }

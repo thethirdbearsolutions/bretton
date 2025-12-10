@@ -439,6 +439,109 @@ io.on('connection', (socket) => {
     console.log('=========================');
   });
   
+  // Vote on current issue
+  socket.on('vote', ({ roomId, playerId, choice }) => {
+    const room = globalState.rooms[roomId];
+    if (!room || !room.gameStarted) {
+      console.log('Vote rejected: room not found or game not started');
+      return;
+    }
+    
+    // Check player is in game
+    if (!room.players[playerId]) {
+      console.log('Vote rejected: player not in game');
+      return;
+    }
+    
+    // Store vote
+    room.votes[playerId] = choice;
+    console.log(`Vote received: ${playerId} voted ${choice} in room ${roomId}`);
+    
+    // Check if all players have voted
+    const playerIds = Object.keys(room.players);
+    const allVoted = playerIds.every(id => room.votes[id]);
+    
+    if (allVoted) {
+      console.log('All players voted, calculating results...');
+      
+      // Tally votes
+      const voteTally = { for: 0, against: 0, abstain: 0 };
+      Object.values(room.votes).forEach(vote => {
+        voteTally[vote] = (voteTally[vote] || 0) + 1;
+      });
+      
+      // Determine outcome (simple majority)
+      const outcome = voteTally.for > voteTally.against ? 'passed' : 'failed';
+      
+      // Calculate scores for this round
+      const roundScores = {};
+      Object.entries(room.players).forEach(([id, player]) => {
+        const country = player.country;
+        const vote = room.votes[id];
+        
+        // Simple scoring logic
+        let points = 0;
+        
+        // Base points for participation
+        points += 10;
+        
+        // Bonus points based on vote alignment with outcome
+        if ((vote === 'for' && outcome === 'passed') || (vote === 'against' && outcome === 'failed')) {
+          points += 30; // Voted with winning side
+        }
+        
+        // Abstain penalty
+        if (vote === 'abstain') {
+          points += 5; // Small points for abstaining
+        }
+        
+        roundScores[country] = points;
+        room.scores[country] = (room.scores[country] || 0) + points;
+      });
+      
+      // Store results
+      room.voteTally = voteTally;
+      room.roundOutcome = outcome;
+      room.roundScores = roundScores;
+      room.gamePhase = 'results';
+      
+      console.log(`Round ${room.currentRound} results:`, { voteTally, outcome });
+    }
+    
+    broadcastToRoom(roomId);
+    saveState();
+  });
+  
+  // Advance to next round (admin only)
+  socket.on('advanceRound', ({ roomId, playerId }) => {
+    const room = globalState.rooms[roomId];
+    if (!room) return;
+    
+    const user = Object.values(globalState.users).find(u => u.playerId === playerId);
+    const isSuperAdmin = user && user.role === 'superadmin';
+    
+    if (!isSuperAdmin) {
+      console.log('Advance round rejected: not superadmin');
+      return;
+    }
+    
+    // Advance round
+    room.currentRound++;
+    console.log(`Advancing to round ${room.currentRound}`);
+    
+    // Check if game is complete
+    if (room.currentRound > 10) {
+      room.gamePhase = 'complete';
+      console.log('Game complete!');
+    } else {
+      room.gamePhase = 'voting';
+      room.votes = {}; // Clear votes for new round
+    }
+    
+    broadcastToRoom(roomId);
+    saveState();
+  });
+  
   // SUPERADMIN ONLY: Reset room
   socket.on('resetRoom', ({ roomId, playerId }) => {
     const room = globalState.rooms[roomId];
