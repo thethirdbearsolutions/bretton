@@ -471,7 +471,7 @@ io.on('connection', (socket) => {
       });
       
       // Determine outcome (simple majority)
-      const outcome = voteTally.for > voteTally.against ? 'passed' : 'failed';
+      const outcome = voteTally['for'] > voteTally.against ? 'passed' : 'failed';
       
       // Calculate scores for this round
       const roundScores = {};
