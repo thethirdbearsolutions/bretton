@@ -400,6 +400,7 @@ io.on('connection', (socket) => {
     room.gamePhase = 'voting';
     room.currentRound = 1;
     
+    socket.emit('startGameResult', { success: true });
     broadcastToRoom(roomId);
     broadcastRoomList();
     saveState();
@@ -435,6 +436,7 @@ io.on('connection', (socket) => {
       achievements: {}
     };
     
+    socket.emit('resetRoomResult', { success: true });
     broadcastToRoom(roomId);
     broadcastRoomList();
     saveState();
