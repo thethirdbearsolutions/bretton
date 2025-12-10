@@ -1508,6 +1508,7 @@
                       )}
                     </div>
                   ) : (
+                    <div>
                     <div style={{ marginBottom: '30px' }}>
                     <h3>Players ({playerList.length}/7)</h3>
                     <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
@@ -1607,7 +1608,7 @@
                     </div>
                   )}
                 </div>
-                )}
+                </div>
               </div>
             );
           }
@@ -1676,34 +1677,61 @@
         // Initialize app when game data is loaded
         function initializeApp() {
           if (gameData) {
-            console.log('Initializing app with game data:', {
+            console.log('=== INITIALIZING APP ===');
+            console.log('Game data loaded:', {
               countries: Object.keys(gameData.countries || {}).length,
               issues: (gameData.issues || []).length
             });
             
             try {
+              console.log('Creating React root...');
               const root = ReactDOM.createRoot(document.getElementById('root'));
+              
+              console.log('Rendering component...');
               root.render(<BrettonWoodsMultiRoom />);
-              console.log('App initialized successfully!');
+              
+              console.log('✓ App initialized successfully!');
             } catch (err) {
-              console.error('Error initializing app:', err);
+              console.error('!!! ERROR INITIALIZING APP !!!');
+              console.error('Error name:', err.name);
+              console.error('Error message:', err.message);
+              console.error('Error stack:', err.stack);
+              
               document.getElementById('root').innerHTML = `
                 <div class="container">
                   <div class="card">
                     <h2 style="color: #dc2626;">❌ Initialization Error</h2>
-                    <p>Failed to start the application. Please refresh the page.</p>
-                    <pre style="background: #f8fafc; padding: 10px; overflow: auto; text-align: left;">
-${err.message}
+                    <p>Failed to start the application. Check console for details.</p>
+                    <pre style="background: #f8fafc; padding: 10px; overflow: auto; text-align: left; font-size: 0.875rem;">
+${err.name}: ${err.message}
+
+Stack:
+${err.stack}
                     </pre>
-                    <button onclick="location.reload()" class="btn-primary">
+                    <button onclick="location.reload()" class="btn-primary" style="margin-top: 20px;">
                       Reload Page
+                    </button>
+                    <button onclick="console.log('Error details:', ${JSON.stringify(err.message)})" 
+                            style="margin-top: 10px; padding: 10px 20px; background: #64748b; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                      Show Error in Console
                     </button>
                   </div>
                 </div>
               `;
             }
           } else {
-            console.error('Cannot initialize - no game data!');
+            console.error('!!! Cannot initialize - no game data !!!');
+            document.getElementById('root').innerHTML = `
+              <div class="container">
+                <div class="card">
+                  <h2 style="color: #dc2626;">❌ No Game Data</h2>
+                  <p>Game data failed to load. Check console and ensure game-data.json exists.</p>
+                  <button onclick="location.reload()" class="btn-primary">
+                    Reload Page
+                  </button>
+                </div>
+              </div>
+            `;
           }
         }
     </script>
