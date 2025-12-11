@@ -285,7 +285,6 @@
           const [isAuthenticated, setIsAuthenticated] = useState(false);
           const [username, setUsername] = useState('');
           const [playerId, setPlayerId] = useState('');
-          const [userRole, setUserRole] = useState('player');
           const [showRegister, setShowRegister] = useState(false);
           
           // Room state
@@ -304,12 +303,10 @@
           useEffect(() => {
             const savedUsername = sessionStorage.getItem('brettonWoodsUsername');
             const savedPlayerId = sessionStorage.getItem('brettonWoodsPlayerId');
-            const savedUserRole = sessionStorage.getItem('brettonWoodsUserRole');
             
             if (savedUsername && savedPlayerId) {
               setUsername(savedUsername);
               setPlayerId(savedPlayerId);
-              setUserRole(savedUserRole || 'player');
               setIsAuthenticated(true);
             }
           }, []);
@@ -368,28 +365,6 @@
               setPlayerCountry(null);
               setIsReady(false);
             });
-            
-            socket.on('startGameResult', ({ success, message }) => {
-              if (!success) {
-                alert(message || 'Failed to start game');
-              } else {
-                console.log('Game started successfully');
-              }
-            });
-            
-            socket.on('resetRoomResult', ({ success, message }) => {
-              if (!success) {
-                alert(message || 'Failed to reset room');
-              } else {
-                console.log('Room reset successfully');
-              }
-            });
-            
-            socket.on('joinResult', ({ success, message }) => {
-              if (!success) {
-                alert(message || 'Failed to join game');
-              }
-            });
 
             return () => {
               socket.off('connect');
@@ -400,9 +375,6 @@
               socket.off('joinRoomResult');
               socket.off('leftRoom');
               socket.off('roomDeleted');
-              socket.off('startGameResult');
-              socket.off('resetRoomResult');
-              socket.off('joinResult');
             };
           }, [playerId]);
 
@@ -415,19 +387,13 @@
 
             socket.emit('register', { username, password });
             
-            socket.once('registerResult', ({ success, playerId: newPlayerId, role, message }) => {
+            socket.once('registerResult', ({ success, playerId: newPlayerId, message }) => {
               if (success) {
                 setUsername(username);
                 setPlayerId(newPlayerId);
-                setUserRole(role || 'player');
                 setIsAuthenticated(true);
                 sessionStorage.setItem('brettonWoodsUsername', username);
                 sessionStorage.setItem('brettonWoodsPlayerId', newPlayerId);
-                sessionStorage.setItem('brettonWoodsUserRole', role || 'player');
-                
-                if (role === 'superadmin') {
-                  alert('🎉 Welcome, Administrator! You have full control over the site.');
-                }
               } else {
                 alert(message);
               }
@@ -442,29 +408,14 @@
 
             socket.emit('login', { username, password });
             
-            socket.once('loginResult', ({ success, playerId: returnedPlayerId, role, message }) => {
-              console.log('=== LOGIN RESULT ===');
-              console.log('Success:', success);
-              console.log('Role received:', role);
-              console.log('Player ID:', returnedPlayerId);
-              
+            socket.once('loginResult', ({ success, playerId: returnedPlayerId, message }) => {
               if (success) {
                 setUsername(username);
                 setPlayerId(returnedPlayerId);
-                setUserRole(role || 'player');
                 setIsAuthenticated(true);
                 sessionStorage.setItem('brettonWoodsUsername', username);
                 sessionStorage.setItem('brettonWoodsPlayerId', returnedPlayerId);
-                sessionStorage.setItem('brettonWoodsUserRole', role || 'player');
-                
-                console.log('Stored in session:', {
-                  username: sessionStorage.getItem('brettonWoodsUsername'),
-                  playerId: sessionStorage.getItem('brettonWoodsPlayerId'),
-                  role: sessionStorage.getItem('brettonWoodsUserRole')
-                });
-                console.log('===================');
               } else {
-                console.log('Login failed:', message);
                 alert(message || 'Login failed. If you recently registered but the server restarted, you may need to register again or click "Clear Saved Session" to start fresh.');
               }
             });
@@ -503,11 +454,6 @@
 
           // Game handlers
           const handleJoinGame = (country) => {
-            if (userRole === 'superadmin') {
-              alert('As administrator, you are an observer and cannot select a country.');
-              return;
-            }
-            
             if (currentRoom) {
               socket.emit('joinGame', { roomId: currentRoom.id, playerId, country });
             }
@@ -625,23 +571,7 @@
               <div className="room-lobby">
                 <div className="header">
                   <h1>🌍 Bretton Woods - Game Rooms</h1>
-                  <p>
-                    Welcome, {username}! 👤
-                    {userRole === 'superadmin' && (
-                      <span style={{
-                        marginLeft: '10px',
-                        padding: '4px 12px',
-                        background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                        color: 'white',
-                        borderRadius: '12px',
-                        fontSize: '0.75rem',
-                        fontWeight: 'bold',
-                        boxShadow: '0 2px 4px rgba(220, 38, 38, 0.3)'
-                      }}>
-                        🛡️ ADMINISTRATOR
-                      </span>
-                    )}
-                  </p>
+                  <p>Welcome, {username}! 👤</p>
                 </div>
 
                 <div style={{ 
@@ -700,88 +630,19 @@
                   )}
                 </div>
 
-                {userRole === 'superadmin' && (
-                  <div className="card" style={{ 
-                    marginTop: '20px', 
-                    background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-                    border: '2px solid #dc2626'
-                  }}>
-                    <h3 style={{ margin: '0 0 15px 0', color: '#7f1d1d' }}>
-                      🛡️ Administrator Panel
-                    </h3>
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      <button
-                        onClick={() => {
-                          if (window.confirm('Clear all data?\n\nThis will delete:\n• All rooms\n• All user accounts (except administrator)\n• All game progress\n\nType CLEAR_ALL_DATA in the next prompt to confirm.')) {
-                            const confirmCode = prompt('Type CLEAR_ALL_DATA to confirm:');
-                            if (confirmCode === 'CLEAR_ALL_DATA') {
-                              socket.emit('clearAllData', { playerId, confirmCode });
-                              socket.once('clearDataResult', ({ success, message }) => {
-                                alert(message);
-                                if (success) {
-                                  window.location.reload();
-                                }
-                              });
-                            }
-                          }
-                        }}
-                        style={{
-                          padding: '10px 16px',
-                          background: '#dc2626',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontWeight: '600'
-                        }}
-                      >
-                        🗑️ Clear All Data
-                      </button>
-                    </div>
-                    <p style={{ 
-                      marginTop: '15px', 
-                      fontSize: '0.875rem', 
-                      color: '#7f1d1d',
-                      fontStyle: 'italic'
-                    }}>
-                      Only you (jjucovy@gmail.com) can create and manage rooms.
-                    </p>
-                  </div>
-                )}
+                <button 
+                  className="btn-create-room"
+                  onClick={() => setShowCreateRoomModal(true)}
+                  style={{ marginTop: '20px' }}
+                >
+                  + Create New Room
+                </button>
 
-                {userRole === 'superadmin' && (
-                  <>
-                    <button 
-                      className="btn-create-room"
-                      onClick={() => setShowCreateRoomModal(true)}
-                      style={{ marginTop: '20px' }}
-                    >
-                      + Create New Room
-                    </button>
-
-                    {showCreateRoomModal && (
-                      <CreateRoomModal
-                        onClose={() => setShowCreateRoomModal(false)}
-                        onCreate={handleCreateRoom}
-                      />
-                    )}
-                  </>
-                )}
-                
-                {userRole !== 'superadmin' && (
-                  <div className="card" style={{ 
-                    marginTop: '20px',
-                    background: '#f8fafc',
-                    border: '2px solid #cbd5e1',
-                    textAlign: 'center',
-                    padding: '30px'
-                  }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '15px' }}>🔒</div>
-                    <h3 style={{ color: '#475569', marginBottom: '10px' }}>Room Creation Restricted</h3>
-                    <p style={{ color: '#64748b', margin: 0 }}>
-                      Only the site administrator can create new rooms.
-                    </p>
-                  </div>
+                {showCreateRoomModal && (
+                  <CreateRoomModal
+                    onClose={() => setShowCreateRoomModal(false)}
+                    onCreate={handleCreateRoom}
+                  />
                 )}
               </div>
             );
@@ -797,13 +658,11 @@
 
             return (
               <div className="container">
-                {userRole === 'superadmin' && (
-                  <div className="breadcrumb">
-                    <button onClick={handleLeaveRoom}>← Back to Lobby</button>
-                    <span>/</span>
-                    <span>{currentRoom.name}</span>
-                  </div>
-                )}
+                <div className="breadcrumb">
+                  <button onClick={handleLeaveRoom}>← Back to Lobby</button>
+                  <span>/</span>
+                  <span>{currentRoom.name}</span>
+                </div>
 
                 <div style={{ 
                   position: 'fixed', 
@@ -823,58 +682,28 @@
                 <div className="header">
                   <h1>🏠 {currentRoom.name}</h1>
                   <p style={{ marginTop: '8px', fontSize: '0.875rem', color: '#64748b' }}>
-                    {userRole === 'superadmin' && '🛡️ Administrator | '}
+                    {isHost && '👑 You are the host | '}
                     Room ID: {currentRoom.id}
                   </p>
                 </div>
 
                 <div className="card">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <h2>Game Lobby</h2>
-                    {userRole === 'superadmin' && (
-                      <div style={{ display: 'flex', gap: '10px' }}>
-                        {!gameState?.gameStarted && (
-                          <button
-                            onClick={() => socket.emit('startGame', { roomId: currentRoom.id, playerId })}
-                            className="btn-primary"
-                            style={{ padding: '8px 16px' }}
-                          >
-                            🎮 Start Game
-                          </button>
-                        )}
-                        {gameState?.gameStarted && (
-                          <button
-                            onClick={() => {
-                              if (window.confirm('Reset this room? All progress will be lost.')) {
-                                socket.emit('resetRoom', { roomId: currentRoom.id, playerId });
-                              }
-                            }}
-                            style={{
-                              padding: '8px 16px',
-                              background: '#f59e0b',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            🔄 Reset Game
-                          </button>
-                        )}
-                        <button
-                          onClick={handleDeleteRoom}
-                          style={{
-                            padding: '8px 16px',
-                            background: '#dc2626',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          🗑️ Delete Room
-                        </button>
-                      </div>
+                    {isHost && (
+                      <button
+                        onClick={handleDeleteRoom}
+                        style={{
+                          padding: '8px 16px',
+                          background: '#dc2626',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Delete Room
+                      </button>
                     )}
                   </div>
 
@@ -910,22 +739,7 @@
                     </div>
                   </div>
 
-                  {userRole === 'superadmin' ? (
-                    <div style={{
-                      padding: '20px',
-                      background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-                      borderRadius: '8px',
-                      border: '2px solid #dc2626',
-                      textAlign: 'center'
-                    }}>
-                      <div style={{ fontSize: '2rem', marginBottom: '10px' }}>👁️</div>
-                      <h3 style={{ color: '#7f1d1d', marginBottom: '10px' }}>Observer Mode</h3>
-                      <p style={{ color: '#991b1b', margin: 0 }}>
-                        You are observing this game as administrator.<br />
-                        You cannot select a country or play.
-                      </p>
-                    </div>
-                  ) : !playerCountry ? (
+                  {!playerCountry ? (
                     <div>
                       <h3>Select Your Country</h3>
                       <div className="country-grid">
@@ -962,9 +776,19 @@
                         <p style={{ fontWeight: 'bold', marginBottom: '8px' }}>
                           You are playing as: {countries[playerCountry]?.name || playerCountry}
                         </p>
-                        <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
-                          You are committed to this country for the game.
-                        </p>
+                        <button
+                          onClick={handleLeaveGame}
+                          style={{
+                            padding: '8px 16px',
+                            background: '#64748b',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Leave Game
+                        </button>
                       </div>
 
                       <button
