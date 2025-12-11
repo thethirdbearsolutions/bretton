@@ -223,9 +223,10 @@
     <script src="/socket.io/socket.io.js"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
     <script type="text/babel">
+      // Your React/JSX code
         let gameData = null;
         let loadAttempts = 0;
         const MAX_ATTEMPTS = 3;
@@ -1735,8 +1736,7 @@
               countries: Object.keys(gameData.countries || {}).length,
               issues: (gameData.issues || []).length
             });
-
-              
+            
             try {
               console.log('Creating React root...');
               const root = ReactDOM.createRoot(document.getElementById('root'));
