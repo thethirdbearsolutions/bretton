@@ -1,0 +1,78 @@
+<!-- world-map.svg - Simplified world map for military deployment visualization -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 1000" id="world-map">
+  <defs>
+    <!-- Define country colors -->
+    <style>
+      .usa-territory { fill: #2563eb; opacity: 0.3; }
+      .uk-territory { fill: #dc2626; opacity: 0.3; }
+      .ussr-territory { fill: #9333ea; opacity: 0.3; }
+      .france-territory { fill: #d97706; opacity: 0.3; }
+      .china-territory { fill: #16a34a; opacity: 0.3; }
+      .india-territory { fill: #ea580c; opacity: 0.3; }
+      .argentina-territory { fill: #0891b2; opacity: 0.3; }
+      .ocean { fill: #e0f2fe; }
+      .land { fill: #f1f5f9; }
+      .border { stroke: #94a3b8; stroke-width: 1; fill: none; }
+      .deployment-base { fill: #dc2626; stroke: #7f1d1d; stroke-width: 2; }
+    </style>
+  </defs>
+  
+  <!-- Ocean background -->
+  <rect class="ocean" x="0" y="0" width="2000" height="1000"/>
+  
+  <!-- Continents (simplified shapes) -->
+  
+  <!-- North America -->
+  <g id="north-america">
+    <path class="land" d="M 150,200 L 200,150 L 350,120 L 450,150 L 480,200 L 500,350 L 450,400 L 350,420 L 250,400 L 200,350 Z"/>
+    <path class="usa-territory" d="M 180,250 L 350,220 L 450,250 L 480,350 L 400,380 L 250,370 Z"/>
+  </g>
+  
+  <!-- South America -->
+  <g id="south-america">
+    <path class="land" d="M 350,500 L 400,450 L 480,550 L 500,700 L 420,750 L 350,720 L 320,600 Z"/>
+    <path class="argentina-territory" d="M 350,650 L 420,700 L 400,730 L 340,710 Z"/>
+  </g>
+  
+  <!-- Europe -->
+  <g id="europe">
+    <path class="land" d="M 850,150 L 1000,120 L 1100,180 L 1050,250 L 900,280 L 820,220 Z"/>
+    <path class="uk-territory" d="M 870,160 L 920,150 L 930,200 L 880,210 Z"/>
+    <path class="france-territory" d="M 920,220 L 1000,210 L 1010,250 L 940,260 Z"/>
+  </g>
+  
+  <!-- USSR/Russia -->
+  <g id="ussr">
+    <path class="ussr-territory" d="M 1000,100 L 1600,120 L 1650,200 L 1700,350 L 1600,380 L 1200,400 L 1050,350 L 1000,200 Z"/>
+  </g>
+  
+  <!-- Africa -->
+  <g id="africa">
+    <path class="land" d="M 900,350 L 1050,320 L 1150,400 L 1100,650 L 950,700 L 850,600 L 880,450 Z"/>
+  </g>
+  
+  <!-- India -->
+  <g id="india">
+    <path class="india-territory" d="M 1300,450 L 1400,420 L 1450,500 L 1420,580 L 1340,560 L 1310,500 Z"/>
+  </g>
+  
+  <!-- China -->
+  <g id="china">
+    <path class="china-territory" d="M 1500,250 L 1650,280 L 1680,400 L 1600,480 L 1500,450 L 1480,350 Z"/>
+  </g>
+  
+  <!-- Australia -->
+  <g id="australia">
+    <path class="land" d="M 1600,700 L 1750,680 L 1800,750 L 1750,820 L 1650,800 L 1580,750 Z"/>
+  </g>
+  
+  <!-- Grid lines for reference -->
+  <g id="grid" opacity="0.1">
+    <line x1="0" y1="250" x2="2000" y2="250" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,5"/>
+    <line x1="0" y1="500" x2="2000" y2="500" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,5"/>
+    <line x1="0" y1="750" x2="2000" y2="750" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,5"/>
+    <line x1="500" y1="0" x2="500" y2="1000" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,5"/>
+    <line x1="1000" y1="0" x2="1000" y2="1000" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,5"/>
+    <line x1="1500" y1="0" x2="1500" y2="1000" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,5"/>
+  </g>
+</svg>
