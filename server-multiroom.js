@@ -15,7 +15,7 @@ const STATE_FILE = path.join(__dirname, 'game-state-multiroom.json');
 
 // Serve multi-room HTML as the main page (MUST come before static middleware!)
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index-multiroom.html'));
+  res.sendFile(path.join(__dirname, 'index-multiroom-TERNARY-FIXED.html'));
 });
 
 // Serve static files (after the specific route)
